@@ -1,0 +1,107 @@
+﻿2010 - 2016 School Safety Report
+Data Dictionary
+
+Source: NYC Open Data 
+Available at: https://data.cityofnewyork.us/Education/2010-2016-School-Safety-Report/qybk-bjjc 
+
+
+
+▪  School Year
+
+Plain Text
+▪  Building Code
+
+Plain Text
+▪  DBN
+
+Plain Text
+▪  Location Name
+the name by which the organization is known. For a learning community, it is the official title of the school.
+Plain Text
+▪  Location Code 
+a unique identifier that can include schools, administrative offices, learning communities, etc. When the Learning_Community_Name = ‘School’, the Location_Code is a combination of the borough code and the school number. 
+Plain Text
+▪  Address
+the school’s address (building number and street name). 
+Plain Text
+▪  Borough
+NYC Boro the location is situated in 
+Plain Text
+▪  Geographical District Code
+the school’s geographical district as defined by the NYC Department of Education. 
+Plain Text
+▪  Register
+Number of students on register 
+Plain Text
+▪  Building Name
+the official name of the building a school is located in 
+Plain Text
+▪  # Schools
+number of schools in in the building 
+Plain Text
+▪  Schools in Building
+names of the schools in the buildings 
+Plain Text
+▪  Major N
+number of major crimes 
+Plain Text
+▪  Oth N
+number of other crimes 
+Plain Text
+▪  NoCrim N
+number of non-criminal crimes 
+Plain Text
+▪  Prop N
+number of property crimes 
+Plain Text
+▪  Vio N
+number of violent crimes 
+Plain Text
+▪  ENGroupA
+group name that the building population falls under 
+Plain Text
+▪  RangeA
+building population 
+Plain Text
+▪  AvgOfMajor N
+average of major crimes for all buildings that have the same EnGroupA/Range A
+Plain Text
+▪  AvgOfNoCrim N
+average of non-criminal crimes for all buildings that have the same EnGroupA/Range A 
+Plain Text
+▪  AvgOfProp N
+average of property crimes for all buildings that have the same EnGroupA/Range A 
+Plain Text
+▪  AvgOfVio N
+average of violent crimes for all buildings that have the same EnGroupA/Range A
+Plain Text
+▪  Borough Name
+
+Plain Text
+▪  Postcode
+
+Number
+▪  Latitude
+
+Number
+▪  Longitude
+
+Number
+▪  Community Board
+
+Number
+▪  Council District 
+
+Number
+▪  Census Tract
+
+Number
+▪  BIN
+
+Number
+▪  BBL
+
+Number
+▪  NTA
+
+Plain Text

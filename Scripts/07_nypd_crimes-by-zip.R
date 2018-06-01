@@ -1,0 +1,95 @@
+# #############################
+## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
+## Author:          Cedric Bhihe, Santi Calvo
+## Delivery:        2018.06.26
+## Script:          07_nypd_crimes-by-zip.R
+# #############################
+
+
+rm(list=ls(all=TRUE))
+
+setwd("~/Documents/Work/Academic-research/NYC-complaints/")
+set.seed(932178)
+
+options(scipen=6) # R switches to sci notation above 5 digits on plot axes
+ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
+          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
+
+datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
+
+
+# #############################
+## Source parameter file
+# #############################
+
+source(file="Scripts/00_nyc311_input-parameters.R",
+       local=F,echo=F)  # Year, Month, Day, ...setwd("~/Documents/Work/Academic-research/NYC-complaints/")
+
+
+# #############################
+## Libraries
+# #############################
+
+setRepositories(ind = c(1:6,8))
+library("ggplot2")
+
+
+# #############################
+## Functions
+# #############################
+
+csvSaveF <- function(dataObj,targetfile) {
+    write.table(dataObj,
+                targetfile,
+                append=F,
+                sep=",",
+                eol="\n",
+                na ="NA",
+                dec=".",
+                row.names=F,
+                col.names=T)
+}    # save cvs to file
+
+
+# #############################
+## Load data
+# #############################
+
+source_file <- paste0("Data/",
+                       yearNbr,
+                       ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
+                       "00_nyc-crime-map_proc03.csv")
+
+protoY <- read.csv(source_file,
+                   header=T,
+                   sep=",",
+                   quote="\"",
+                   dec=".")
+
+
+# #############################
+## Reorder by unique ZIP
+# #############################
+
+ZIP_lst <- unique(unlist(protoY$ZIP))   # vector
+
+ZIPcrime <- matrix(NA,nrow=length(ZIP_lst),ncol=4)
+colnames(ZIPcrime) <- c("ZIP","Violation","Misdemeanor","Felony")
+ZIPcrime[,1] <- sort(ZIP_lst,decreasing=F)
+for ( zz in 1:nrow(ZIPcrime) ) {
+  ZIPcrime[zz,2] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
+                                   & protoY$offCat == "VIOLATION" ) )
+  ZIPcrime[zz,3] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
+                                   & protoY$offCat == "MISDEMEANOR" ) )
+  ZIPcrime[zz,4] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
+                                   & protoY$offCat == "FELONY" ) )
+}
+
+
+## Save processed raw csv file as `nypd_offense_modalities.csv``
+target_file <- paste0("Data/",
+                          yearNbr,
+                          ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
+                          "00_nyc_crime-by-zip.csv")
+csvSaveF(ZIPcrime,target_file)     # csv to disk
+

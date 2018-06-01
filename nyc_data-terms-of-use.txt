@@ -1,0 +1,65 @@
+﻿NYC TERM OF USE
+
+Welcome to New York City's Official Website: 
+PLEASE READ THE FOLLOWING TERMS OF USE ("TERMS") CAREFULLY BEFORE USING THIS WEBSITE. BY ACCESSING OR USING NEW YORK CITY'S ("CITY") WEBSITE, INCLUDING BUT NOT LIMITED TO ALL SUBPAGES ("NYC.gov"), YOU UNDERSTAND AND AGREE, WITHOUT LIMITATION OR QUALIFICATION, TO THESE TERMS. 
+I. YOUR USE OF NYC.gov
+    A. You agree to access and use NYC.gov only for lawful purposes. You are solely responsible for the knowledge of and adherence to any and all laws, statutes, rules and regulations pertaining to your use of NYC.gov. By accessing NYC.gov, you agree that you will not:
+        1. use NYC.gov to commit a criminal offense or to encourage others to engage in any conduct which would constitute a criminal offense;
+        2. use NYC.gov in a way to give rise to civil liability or encourage others to engage in any conduct which would give rise to civil liability;
+        3. use NYC.gov to impersonate other parties or entities;
+        4. use NYC.gov to upload any content that contains a software virus, "Trojan Horse" or any other computer code, files, or programs that may alter, damage, or interrupt the functionality of NYC.gov or the hardware or software of any other person who accesses NYC.gov;
+        5. upload, post, email, or otherwise transmit any materials that you do not have a right to transmit under any law or contractual relationship; 
+        6. alter, damage, or delete any content posted on NYC.gov;
+        7. disrupt NYC.gov or its servers or networks in any way; or
+        8. claim a relationship with or represent any business, association, or other organization with which you are not authorized to claim such a relationship or to represent.
+    B. The City reserves the right to suspend a NYC.gov account and/or suspend access to NYC.gov if the City has reason to believe that the account/access is being used for any of the prohibited purposes enumerated in Section I(A)(1-8) above. The City shall provide notice of such suspension if you have provided the City with an email or other electronic address or mail address when accessing NYC.gov. (Notice shall be given to you at (one of) the address(es) provided.) 
+II. YOUR PASSWORDS AND ACCOUNT SECURITY 
+    A. You agree and understand that you are responsible for maintaining the security and confidentiality of passwords associated with any account you use on NYC.gov.
+    B. Accordingly, you agree that you will be solely responsible to the City for all activities that occur under your account.
+    C. If you become aware of any unauthorized use of your password or of your account, you agree to notify the City immediately by visiting the Password and Account Problems page.
+    D. The City reserves the right to suspend your account if the City deems you are using the account in violation of Article I of these Terms above or in violation of Article II of the Terms of Use for New York City's NYC.ID Application ("NYC.ID Application"). 
+III. INFORMATION YOU PROVIDE
+In order to use certain aspects of NYC.gov, you may be required to provide information about yourself. You agree that any information you give to the City will always be accurate, correct and up to date. To learn how the City may use such information, please visit the NYC.gov Privacy Policy and the Terms of Use for the NYC.ID Application, the latter of which addresses the creation of user accounts on NYC.gov. 
+IV. INTELLECTUAL PROPERTY
+    A. The City respects the intellectual property of others and it asks its users to do the same. Service marks and trademarks contained in or displayed on NYC.gov, and the contents of linked sites operated by third parties, are the property of their respective owners (which may be the City). All other design, information, text, graphics, images, pages, interfaces, links, software, and other items and materials contained in or displayed on NYC.gov, and the selection and arrangements thereof, are the property of the City of New York. All rights are reserved.
+    B. Digital Millennium Copyright Act ("DMCA") Notice/Takedown Request
+
+If you believe that your work has been copied in a way that constitutes copyright infringement via its display on, or other use by, NYC.gov, you may submit a notice pursuant to the DMCA by providing the City's DMCA Designated Agent (see Section IV(E) below) with the following information in writing:
+        1. a physical or electronic signature of a person authorized to act on behalf of the owner of an exclusive right that is allegedly infringed; 
+        2. identification of the copyrighted work claimed to have been infringed, or, if multiple copyrighted works are covered by a single notification, a representative list of such works;
+        3. identification of the material that is claimed to be infringing or to be the subject of infringing activity and that is to be removed or access to which is to be disabled, and information reasonably sufficient to permit the City to locate the material;
+        4. information reasonably sufficient to permit the City to contact you, such as an address, telephone number, and, if available, an email address;
+        5. a statement that you (and, if applicable, the person or entity on whose behalf you are acting) have a good-faith belief that use of the material in the manner complained of is not authorized by the copyright owner, its agent, or the law; and
+        6. a statement that the information in the notification is accurate, and under penalty of perjury, that you are authorized to act on behalf of the owner of an exclusive right that is allegedly infringed.
+    C. DMCA Counter-Notice
+
+You do not have the right to post material to NYC.gov unless given such right by the City. If the City has given you permission to post an array of material to NYC.gov, and the specific material you posted has been taken down pursuant to the DMCA, you may submit a counter-notice pursuant to the DMCA by providing the City's DMCA Designated Agent (see Section IV(E) below) with the following information in writing:
+        1. your physical or electronic signature; 
+        2. identification of the material that has been removed or to which access has been disabled and the location at which the material appeared before it was removed or access to it was disabled;
+        3. a statement under penalty of perjury that you have a good faith belief that the material was removed or disabled as a result of mistake or misidentification of the material to be removed or disabled; and
+        4. your name, address, and telephone number, and a statement that the you consent to the jurisdiction of the United States federal district court for the judicial district in which your address is located, or if your address is outside of the United States, that you consent for any judicial district in which jurisdiction of the City may be found, and that you will accept service of process from the person who provided notification under Section IV(B) above or an agent of such person.
+    D. You acknowledge that if you fail to comply with all of the above requirements for a DMCA Notice/Counter-Notice (as applicable), your Notice/Counter-Notice may not be valid. 
+    E. The City's Designated Agent under the DMCA for NYC.gov is Dominic Mauro, who can be reached as follows: 
+       Dominic Mauro
+Records Access Counsel
+City of New York
+Department of Information Technology and Telecommunications
+255 Greenwich Street, 9th Floor
+New York, NY 10007
+By email: copyright@doitt.nyc.gov 
+    F. For clarity, only DMCA notices should go to the Designated Agent. To request permission to use City intellectual property located on NYC.gov, please visit the List of NYC Agencies and then contact the appropriate agency. For any other questions about NYC.gov, please visit our contact page. 
+V. LINKS TO SITES OF NON-CITY ENTITIES
+NYC.gov may contain links to other sites on the Internet that are operated by parties other than the City. The City does not imply approval of the listed destinations, warrant the accuracy of any information set out in those destinations, or endorse any opinions expressed therein. Like NYC.gov, all other websites operate under the auspices and at the direction of their respective owners who should be contacted directly with questions regarding the content of those sites.
+VI. DISCLAIMERS
+    A. NYC.GOV AND ALL MATERIALS CONTAINED ON IT ARE DISTRIBUTED AND TRANSMITTED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF TITLE OR IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE WITH RESPECT TO THE QUALITY, CONTENT, ACCURACY, COMPLETENESS, CURRENCY, FREEDOM FROM INTERRUPTION, FREEDOM FROM COMPUTER VIRUS, FREEDOM FROM ERRORS OR OMISSIONS, NON-INFRINGEMENT OF CONTENT PLACED ON NYC.GOV (WHETHER BY THE CITY OR A THIRD PARTY) INCLUDING ANY OF THE DESIGN, INFORMATION, TEXT, GRAPHICS, IMAGES, PAGES, INTERFACES, LINKS, SOFTWARE, OR OTHER MATERIALS AND ITEMS CONTAINED IN OR DISPLAYED ON NYC.GOV.
+    B. THE CITY IS NOT RESPONSIBLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL OR CONSEQUENTIAL DAMAGES (REGARDLESS OF WHETHER THEY WERE FORESEEABLE) THAT MAY ARISE FROM THE USE OF, OR THE INABILITY TO USE, NYC.GOV AND/OR THE MATERIALS CONTAINED ON NYC.GOV WHETHER THE MATERIALS CONTAINED ON NYC.GOV ARE PROVIDED BY THE CITY OR A THIRD PARTY.
+    C. ANY MATERIAL DOWNLOADED OR OTHERWISE OBTAINED THROUGH THE USE OF NYC.GOV IS DONE AT YOUR OWN DISCRETION AND RISK. YOU WILL BE SOLELY RESPONSIBLE FOR ANY DAMAGE TO YOUR COMPUTER SYSTEM OR OTHER DEVICE OR LOSS OF DATA THAT RESULTS FROM THE DOWNLOAD OF ANY SUCH MATERIAL.
+    D. CHANGES ARE MADE PERIODICALLY TO THE CITY CHARTER AND MANY CITY LAWS, RULES, FORMS AND SCHEDULES, AND THESE CHANGES MAY OR MAY NOT BE IMMEDIATELY REFLECTED IN THE MATERIALS OR INFORMATION PRESENT ON NYC.GOV. 
+VII. MISCELLANEOUS TERMS 
+    A. Nothing contained in or displayed on NYC.gov or in these Terms constitutes or is intended to constitute legal advice by the City or any of its agencies, officers, employees, agents, attorneys, or representatives.
+    B. You agree that if the City does not exercise or enforce any legal right or remedy which is contained in these Terms (or which the City otherwise has under applicable law), such omission will not be taken to be a formal waiver of the City's rights and shall not be construed to be a modification of these Terms.
+    C. If any court of competent jurisdiction rules that any provision of these Terms is invalid, then that provision will be removed from these Terms without affecting the rest of these Terms. The remaining provisions of these Terms will continue to be valid and enforceable.
+    D. These Terms, and your relationship with the City under these Terms, shall be governed by and construed in accordance with the Laws of the State of New York (notwithstanding New York choice-of-law rules). You agree that any and all claims asserted by or against the City arising under or related to these Terms shall solely be heard and determined either in the courts of the United States located in the City or County of New York or in the courts of the State of New York located in the City and County of New York.
+    E. The City reserves the right to revise and otherwise change these Terms at any time and without notice. Any modification is effective immediately upon posting, unless otherwise stated. Your continued use of NYC.gov following the posting of any modification signifies your acceptance thereof. You should periodically visit this page to review the current Terms of Use.
+    F. These Terms, the NYC.gov Privacy Policy, and, if you use it, the Terms of Use of the NYC.ID Application, constitute the entire agreement between you and the City with respect to your use of NYC.gov and they supersede all prior or contemporaneous communications and proposals, whether electronic, oral or written, between you and the City with respect to NYC.gov. These Terms shall be deemed to include all other notices, policies, disclaimers and other terms contained in NYC.gov and its subpages; provided, however, that in the event of a conflict between such other terms and these Terms, the inconsistemt terms shall control in the following descending order: (1) NYC.ID Application (if applicable); (2) these Terms and the NYC.gov Privacy Policy; and (3) other terms contained in NYC.gov and its subpages. 
+

@@ -1,0 +1,605 @@
+﻿ZIP Code Data
+Tax Year 2014 Documentation Guide
+
+Contents
+A. Overview
+B. Nature of Changes
+C. Population Definitions and Tax Return Addresses
+D. Disclosure Protection Procedures
+E. File Characteristics
+F. Selected Income and Tax Items
+G. Endnotes
+
+A. Overview
+The Statistics of Income (SOI) division bases its ZIP code data on administrative records of individual income tax returns (Forms 1040) from the Internal Revenue Service (IRS) Individual Master File (IMF) system. Included in these data are returns filed during the 12-month period, January 1, 2015 to December 31, 2015. While the bulk of returns filed during the 12-month period are primarily for Tax Year 2014, the IRS received a limited number of returns for tax years before 2014 and these have been included within the ZIP code data.
+
+B. Nature of Changes
+The following changes have been made to the Tax Year 2014 ZIP Code data:
+
+    • Two new variables have been added for volunteer prepared returns: volunteered income tax assistance (VITA) and tax counseling for the elderly (TCE) prepared returns.
+
+    • Five new variables, related to the Affordable Care Act (ACA), have been added to the data: Excess advance premium tax credit repayment, Total premium tax credit, Advance premium tax credit, Health care individual responsibility payment, and Net premium tax credit. Please refer to section F for a complete list of variables and their corresponding names.
+
+
+C. Population Definitions and Tax Return Addresses
+    • ZIP Code data are based on population data that was filed and processed by the IRS during the 2015 calendar year.
+
+    • State totals may not be comparable to State totals published elsewhere by SOI because of specific disclosure protection features in the ZIP code data.[1] 
+
+    • Data do not represent the full U.S. population because many individuals are not required to file an individual income tax return.
+
+    • The address shown on the tax return may differ from the taxpayer’s actual residence.
+
+    • State codes were based on the ZIP code shown on the return.
+
+    • Excluded were tax returns filed without a ZIP code and returns filed with a ZIP code that did not match the State code shown on the return.
+
+    • Excluded were tax returns filed using Army Post Office (APO) and Fleet Post Office addresses, foreign addresses, and addresses in Puerto Rico, Guam, Virgin Islands, American Samoa, Marshall Islands, Northern Marianas, and Palau. 
+
+
+D. Disclosure Protection Procedures
+SOI did not attempt to correct any ZIP codes on the returns; however, it did take the following precautions to avoid disclosing information about specific taxpayers:
+
+    • ZIP codes with less than 100 returns and those identified as a single building or nonresidential ZIP code were categorized as “other” (99999).
+ 
+    • Income and tax items with less than 20 returns for a particular AGI class were combined with another AGI class within the same ZIP Code.  Collapsed AGI classes are identified with a double asterisk (**).
+
+    • All number of returns variables have been rounded to the nearest 10.
+
+    • Excluded from the data are items with less than 20 returns within a ZIP code.
+
+    • Excluded from the data are tax returns with a negative adjusted gross income.
+
+    • Excluded are tax returns representing a specified percentage of the total of any particular cell. For example, if one return represented 75 percent of the value of a given cell, the return was suppressed from the tabulation. The actual threshold percentage used cannot be released.   
+
+E. File Characteristics
+The ZIP code data are available in three formats:  
+
+    (1) Individual state excel files—14zp##xx.xls (## = 01-51; xx = AL-WY) 
+    (2) A comma separated file (.csv) with AGI classes —14zpallagi.csv
+    (3) A comma separated file[2] without AGI classes(The AGI_STUB variable has been set to zero for this file)—14zpallnoagi.csv
+
+For all the files, the money amounts are reported in thousands of dollars.
+
+F. Selected Income and Tax Items
+VARIABLE NAME
+DESCRIPTION
+VALUE/LINE REFERENCE
+Type
+  STATEFIPS
+The State Federal Information Processing System (FIPS) code
+  01-56
+  Char
+  STATE
+The State associated with the ZIP code
+  Two-digit State abbreviation code
+  Char
+  ZIPCODE
+5-digit Zip code
+ 
+  Char
+  AGI_STUB
+Size of adjusted gross income
+1 = $1 under $25,000
+2 = $25,000 under $50,000
+3 = $50,000 under $75,000
+4 = $75,000 under $100,000
+5 = $100,000 under $200,000
+6 = $200,000 or more
+  Num
+  N1
+Number of returns
+ 
+  Num
+  MARS1
+Number of single returns
+  Filing status is single
+  Num
+  MARS2
+Number of joint returns
+  Filing status is married filing jointly
+  Num
+  MARS4
+Number of head of household returns
+  Filing status is head of household
+  Num
+  PREP
+Number of returns with paid preparer's signature
+ 
+  Num
+  N2
+Number of exemptions
+  1040:6d
+  Num
+  NUMDEP
+Number of dependents
+  1040:6c
+ Num
+  TOTAL_VITA
+Total number of volunteer prepared returns [3]
+
+ Num
+  VITA
+Number of volunteer income tax assistance (VITA) prepared returns [3]
+
+ Num
+  TCE
+Number of tax counseling for the elderly (TCE) prepared returns [3]
+
+ Num
+  A00100
+Adjust gross income (AGI) [2]
+  1040:37 / 1040A:21 / 1040EZ:4
+ Num
+  N02650
+Number of returns with total income
+  1040:22 / 1040A:15 / 1040EZ:4
+ Num
+  A02650
+Total income amount
+  1040:22 / 1040A:15 / 1040EZ:4
+ Num
+  N00200
+Number of returns with salaries and wages
+  1040:7 / 1040A:7 / 1040EZ:1
+ Num
+  A00200
+Salaries and wages amount
+  1040:7 / 1040A:7 / 1040EZ:1
+ Num
+  N00300
+Number of returns with taxable interest
+  1040:8a / 1040A:8a / 1040EZ:2
+ Num
+  A00300
+Taxable interest amount
+  1040:8a / 1040A:8a / 1040EZ:2
+ Num
+  N00600
+Number of returns with ordinary dividends 
+  1040:9a / 1040A:9a
+ Num
+  A00600
+Ordinary dividends amount
+  1040:9a / 1040A:9a
+ Num
+  N00650
+Number of returns with qualified dividends
+  1040:9b / 1040A:9b
+ Num
+  A00650
+Qualified dividends amount [4]
+  1040:9b / 1040A:9b
+ Num
+  N00700
+Number of returns with state and local income tax refunds
+  1040:10
+ Num
+  A00700
+State and local income tax refunds amount
+  1040:10
+ Num
+  N00900
+Number of returns with business or professional net income (less loss)
+  1040:12
+ Num
+  A00900
+Business or professional net income (less loss) amount
+  1040:12
+ Num
+  N01000
+Number of returns with net capital gain (less loss)
+  1040:13  1040A:10
+ Num
+  A01000
+Net capital gain (less loss) amount
+  1040:13  1040A:10
+ Num
+  N01400
+Number of returns with taxable individual retirement arrangements distributions
+  1040:15b / 1040:11b
+ Num
+  A01400
+Taxable individual retirement arrangements distributions amount
+  1040:15b / 1040:11b
+ Num
+  N01700
+Number of returns with taxable pensions and annuities
+  1040:16b / 1040A:12b
+ Num
+  A01700
+Taxable pensions and annuities amount
+  1040:16b / 1040A:12b
+ Num
+  SCHF
+Number of farm returns
+  1040:18
+ Num
+  N02300
+Number of returns with unemployment compensation
+  1040:19 / 1040A:13 / 1040EZ:3
+ Num
+  A02300
+Unemployment compensation amount [5]
+  1040:19 / 1040A:13 / 1040EZ:3
+ Num
+  N02500
+Number of returns with taxable Social Security benefits
+  1040:20b / 1040A:14b
+ Num
+  A02500
+Taxable Social Security benefits amount
+  1040:20b / 1040A:14b
+ Num
+  N26270
+Number of returns with partnership/S-corp net income (less loss)
+  Schedule E:32
+ Num
+  A26270
+Partnership/S-corp net income (less loss) amount
+  Schedule E:32
+ Num
+  N02900
+Number of returns with total statutory adjustments
+  1040:36 / 1040A:20
+ Num
+  A02900
+Total statutory adjustments amount
+  1040:36 / 1040A:20
+ Num
+  N03220
+Number of returns with educator expenses
+  1040:23 / 1040A:16
+ Num
+  A03220
+Educator expenses amount
+  1040:23 / 1040A:16
+ Num
+  N03300
+Number of returns with self-employment retirement plans
+  1040:28
+ Num
+  A03300
+Self-employment retirement plans amount
+  1040:28
+ Num
+  N03270
+Number of returns with self-employment health insurance deduction
+  1040:29
+ Num
+  A03270
+Self-employment health insurance deduction amount
+  1040:29
+ Num
+  N03150
+Number of returns with IRA payments
+  1040:32 / 1040A:17
+ Num
+  A03150
+IRA payments amount
+  1040:32 / 1040A:17
+ Num
+  N03210
+Number of returns with student loan interest deduction
+  1040:33 / 1040A:18
+ Num
+  A03210
+Student loan interest deduction amount
+  1040:33 / 1040A:18
+ Num
+  N03230
+Number of returns with tuition and fees deduction
+  1040:34 / 1040A:19
+ Num
+  A03230
+Tuition and fees deduction amount
+  1040:34 / 1040A:19
+ Num
+  N03240
+Returns with domestic production activities deduction
+  1040:35
+ Num
+  A03240
+Domestic production activities deduction amount
+  1040:35
+ Num
+  N04470
+Number of returns with itemized deductions
+  1040:40
+ Num
+  A04470
+Total itemized deductions amount
+  1040:40
+ Num
+  A00101
+Amount of AGI for itemized returns
+  1040:37
+ Num
+  N18425
+Number of returns with State and local income taxes
+  Schedule A:5a
+ Num
+  A18425
+State and local income taxes amount
+  Schedule A:5a
+ Num
+  N18450
+Number of returns with State and local general sales tax
+  Schedule A:5b
+ Num
+  A18450
+State and local general sales tax amount
+  Schedule A:5b
+ Num
+  N18500
+Number of returns with real estate taxes
+  Schedule A:6
+ Num
+  A18500
+Real estate taxes amount
+  Schedule A:6
+ Num
+  N18300
+Number of returns with taxes paid
+  Schedule A:9
+ Num
+  A18300
+Taxes paid amount
+  Schedule A:9
+ Num
+  N19300
+Number of returns with mortgage interest paid
+  Schedule A:10
+ Num
+  A19300
+Mortgage interest paid amount
+  Schedule A:10
+ Num
+  N19700
+Number of returns with contributions
+  Schedule A:19
+ Num
+  A19700
+Contributions amount
+  Schedule A:19
+ Num
+  N04800
+Number of returns with taxable income
+  1040:43 / 1040A:27 / 1040EZ:6
+ Num
+  A04800
+Taxable income amount
+  1040:43 / 1040A:27 / 1040EZ:6
+ Num
+  N05800
+Number of returns with income tax before credits
+  1040:47 / 1040A:30 / 1040EZ:10
+ Num
+  A05800
+Income tax before credits amount
+  1040:47 / 1040A:30 / 1040EZ:10
+ Num
+  N09600
+Number of returns with alternative minimum tax 
+  1040:45
+ Num
+  A09600
+Alternative minimum tax amount
+  1040:45
+  Num
+  N05780
+Number of returns with excess advance premium tax credit repayment
+  1040:46/ 1040A:29
+  Num
+  A05780
+Excess advance premium tax credit repayment amount
+  1040:46/ 1040A:29
+  Num
+  N07100
+Number of returns with total tax credits
+  1040:55 / 1040A:36
+ Num
+  A07100
+Total tax credits amount
+  1040:55 / 1040A:36
+ Num
+  N07300
+Number of returns with foreign tax credit
+  1040:48
+ Num
+  A07300
+Foreign tax credit amount
+  1040:48
+ Num
+  N07180
+Number of returns with child and dependent care credit
+  1040:49 / 1040A:31
+ Num
+  A07180
+Child and dependent care credit amount
+  1040:49 / 1040A:31
+ Num
+  N07230
+Number of returns with nonrefundable education credit
+  1040:50 / 1040A:33
+ Num
+  A07230
+Nonrefundable education credit amount
+  1040:50 / 1040A:33
+ Num
+  N07240
+Number of returns with retirement savings contribution credit
+  1040:51 / 1040A:34
+ Num
+  A07240
+Retirement savings contribution credit amount
+  1040:51 / 1040A:34
+ Num
+  N07220
+Number of returns with child tax credit
+  1040:52 / 1040A:35
+ Num
+  A07220
+Child tax credit amount
+  1040:52 / 1040A:35
+ Num
+  N07260
+Number of returns with residential energy tax credit
+  1040:53
+ Num
+  A07260
+Residential energy tax credit amount
+  1040:53
+ Num
+  N09400
+Number of returns with self-employment tax
+  1040:57
+ Num
+  A09400
+Self-employment tax amount
+  1040:57
+ Num
+  N85770
+Number of returns with total premium tax credit
+  8962:24
+  Num
+  A85770
+Total premium tax credit amount
+  8962:24
+  Num
+  N85775
+Number of returns with advance premium tax credit
+  8962:25
+  Num
+  A85775
+Advance premium tax credit amount
+  8962:25
+  Num
+  N09750
+Number of returns with health care individual responsibility payment
+  1040:61 / 1040A:38 / 1040EZ:11
+  Num
+  A09750
+Health care individual responsibility payment amount
+  1040:61 / 1040A:38 / 1040EZ:11
+ Num
+  N10600
+Number of returns with total tax payments
+  1040:74 / 1040A:46 / 1040EZ:9
+ Num
+  A10600
+Total tax payments amount
+  1040:74 / 1040A:46 / 1040EZ:9
+ Num
+  N59660
+Number of returns with earned income credit
+  1040:66a / 1040A:42a / 1040EZ:8b
+ Num
+  A59660
+Earned income credit amount [6]  
+  1040:66a / 1040A:42a / 1040EZ:8b
+ Num
+  N59720
+Number of returns with excess earned income credit
+  1040:66a / 1040A:42a / 1040EZ:8b
+ Num
+  A59720
+Excess earned income credit (refundable) amount [7]  
+  1040:66a / 1040A:42a / 1040EZ:8b
+ Num
+  N11070
+Number of returns with additional child tax credit
+  1040:67 / 1040A:43
+ Num
+  A11070
+Additional child tax credit amount
+  1040:67 / 1040A:43
+ Num
+  N10960
+Number of returns with refundable education credit
+  1040:68 / 1040A:44
+ Num
+  A10960
+Refundable education credit amount
+  1040:68 / 1040A:44
+ Num
+  N11560
+Number of returns with net premium tax credit
+  1040:69 / 1040A:45
+ Num
+  A11560
+Net premium tax credit amount
+  1040:69 / 1040A:45
+ Num
+  N06500
+Number of returns with income tax
+  1040:56 / 1040A:37 / 1040EZ:10
+ Num
+  A06500
+Income tax amount [8]  
+  1040:56 / 1040A:37 / 1040EZ:10
+ Num
+  N10300
+Number of returns with tax liability
+  1040:63 / 1040A:39 / 1040EZ: 10
+ Num
+  A10300
+Total tax liability amount [9]  
+  1040:63 / 1040A:39 / 1040EZ: 10
+ Num
+  N85530
+Number of returns with additional Medicare tax
+  1040:62a
+ Num
+  A85530
+Additional Medicare tax amount
+  1040:62a
+ Num
+  N85300
+Number of returns with net investment income tax
+  1040:62b
+ Num
+  A85300
+Net investment income tax amount
+  1040:62b
+ Num
+  N11901
+Number of returns with tax due at time of filing
+  1040:78 / 1040A:50 / 1040EZ:14
+ Num
+  A11901
+Tax due at time of filing amount [10]  
+  1040:78 / 1040A:50 / 1040EZ:14
+ Num
+  N11902
+Number of returns with overpayments refunded
+  1040:75 / 1040A:47 / 1040EZ:13a
+ Num
+  A11902
+Overpayments refunded amount [11]  
+  1040:75 / 1040A:47 / 1040EZ:13a
+ Num
+
+G. Endnotes:
+[1] For complete individual income tax tabulations at the State level, see the historic table posted to Tax Stats at http://www.irs.gov/uac/SOI-Tax-Stats---Historic-Table-2.
+
+[2] Does not include returns with adjusted gross deficit.
+
+[3] The "Number of volunteer prepared returns" shows counts of returns prepared by IRS-certified volunteers to taxpayers with limited income, persons with disabilities, limited English speaking taxpayers, current and former members of the military, and taxpayers who are 60 years of age and older.
+
+[4] “Qualified dividends” are ordinary dividends received in tax years beginning after 2002 that meet certain conditions and receive preferential tax rates. The maximum qualified dividends tax rate is 15%.
+	
+[5] Includes the Alaskan permanent fund, reported by residents of Alaska on Forms 1040A and 1040EZ's.  
+This fund only applies to statistics in the totals, and the state of Alaska.
+
+[6] Earned income credit includes both the refundable and non-refundable portions. The non-refundable portion could reduce income tax and certain related taxes to zero. The earned income credit amounts in excess of total tax liability, or amounts when there was no tax liability at all, were refundable. See footnote 6 below for explanation of the refundable portion of the earned income credit.
+
+[7] The refundable portion of the earned income credit equals total income tax minus the earned income credit. If the result is negative, this amount is considered the refundable portion. No other refundable credits were taken into account for this calculation.
+
+[8] Income tax reflects the amount reported on Form 1040 line 56. It also includes data from Form 1040A and 1040EZ filers.
+
+[9] “Total tax liability” differs from “Income tax”, in that “Total tax liability” includes the taxes from recapture of certain prior-year credits, tax applicable to individual retirement arrangements (IRA's), social security taxes on self-employment income and on certain tip income, advanced earned income payments, household employment taxes, and certain other taxes listed in the Form 1040 instructions.
+
+[10] Reflects payments to or withholdings made to "Total tax liability". This is the amount the tax filer owes when the income tax return is filed.
+
+[11] The amount of overpayments the tax filer requested to have refunded.
