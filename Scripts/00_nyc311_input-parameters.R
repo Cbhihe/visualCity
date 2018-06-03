@@ -22,7 +22,7 @@ if (geolocalF) {
 
 ## Analysis period
 #timeWindow <-"monthly"         # sliding time window not implemented yet
-yearNbr <- 2014
+yearNbr <- 2015
 monthNbr <- 4
 dayNbr <- 1
 

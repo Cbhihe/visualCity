@@ -64,7 +64,8 @@ protoY <- read.csv(source_file,
                    header=T,
                    sep=",",
                    quote="\"",
-                   dec=".")
+                   dec=".",
+                   skip=0)
 
 
 # #############################
@@ -73,20 +74,51 @@ protoY <- read.csv(source_file,
 
 ZIP_lst <- unique(unlist(protoY$ZIP))   # vector
 
-ZIPcrime <- matrix(NA,nrow=length(ZIP_lst),ncol=4)
-colnames(ZIPcrime) <- c("ZIP","Violation","Misdemeanor","Felony")
+ZIPcrime <- matrix(NA,nrow=length(ZIP_lst),ncol=5)
+colnames(ZIPcrime) <- c("ZIP","Borough","Violation","Misdemeanor","Felony")
 ZIPcrime[,1] <- sort(ZIP_lst,decreasing=F)
 for ( zz in 1:nrow(ZIPcrime) ) {
-  ZIPcrime[zz,2] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
-                                   & protoY$offCat == "VIOLATION" ) )
   ZIPcrime[zz,3] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
-                                   & protoY$offCat == "MISDEMEANOR" ) )
+                                   & protoY$offCat == "VIOLATION" ) )
   ZIPcrime[zz,4] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
+                                   & protoY$offCat == "MISDEMEANOR" ) )
+  ZIPcrime[zz,5] <- length( which( protoY$ZIP == ZIPcrime[zz,1] 
                                    & protoY$offCat == "FELONY" ) )
 }
 
 
+# #############################
+## Add borough label to each ZIP
+# #############################
+
+source_file <- paste0("Data/nyc_borough-zip.csv")
+
+boroughZIP <- read.csv(source_file,
+                       header=T,
+                       sep=",",
+                       quote="\"",
+                       dec=".",
+                       skip=0)
+
+boroughZIP <- as.data.frame(cbind(ZIP=as.character(sprintf("%05d",boroughZIP$ZIP)),
+                                  Borough=as.character(boroughZIP[,2])
+))
+
+boroughZIP <- boroughZIP[which( boroughZIP$ZIP %in% ZIPcrime$ZIP),]
+
+for (zz in 1:nrow(ZIPcrime)) {
+    ZIPcrime[zz,2] <- ifelse( ZIPcrime[zz,1] %in% as.character(unlist(boroughZIP$ZIP)),
+                             as.character(boroughZIP[which(boroughZIP[,1]== ZIPcrime[zz,1]),2]),
+                             NA)
+}
+
+ZIPcrime <- ZIPcrime[which(ZIPcrime[,2] %in% c("Bronx","Brooklyn","Manhattan","Queens","Staten Island","99999")),]
+
+
+# #############################
 ## Save processed raw csv file as `nypd_offense_modalities.csv``
+# #############################
+
 target_file <- paste0("Data/",
                           yearNbr,
                           ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
