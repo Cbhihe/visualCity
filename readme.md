@@ -5,6 +5,6 @@
 - The full ETL pipeline for data mining is provided.  Several examples of API implementation are also provided in particular, but not only, to query Google map based on direction and/or GPS coordinates.
 - Techniques used are CA, MCA, PCA, Hierarchical Clustering and kNN.  A Random Forest approach to prediction may be added at a future date.
 - All the code included here is extensively commented:
- - R: for ETL and data exploration
- - Python: for machine learning processing 
+     - R: for ETL and data exploration
+     - Python: for machine learning processing 
 
