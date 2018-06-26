@@ -1,5 +1,5 @@
 # #############################
-## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
+## MIRI/MVA   :     Analysis of NYC-311 Service Request Calls
 ## Author:          Cedric Bhihe, Santi Calvo
 ## Delivery:        2018.06.26
 ## Script:          10_analysis_ca-pca-mca.R
@@ -9,6 +9,7 @@
 rm(list=ls(all=TRUE))
 
 setwd("~/Documents/Work/Academic-research/NYC311/")
+#setwd("C:/Users/calvo/Desktop/UPC/Courses/Third_semester/MVA/NYC-complaints-master")
 
 set.seed(932178)
 
@@ -44,15 +45,15 @@ library(ggrepel)        # to plot with well behaved labeling
 # #############################
 
 csvSaveF <- function(dataObj,targetfile) {
-    write.table(dataObj,
-                targetfile,
-                append=F,
-                sep=",",
-                eol="\n",
-                na ="NA",
-                dec=".",
-                row.names=F,
-                col.names=T)
+  write.table(dataObj,
+              targetfile,
+              append=F,
+              sep=",",
+              eol="\n",
+              na ="NA",
+              dec=".",
+              row.names=F,
+              col.names=T)
 }    # save cvs to file
 
 
@@ -60,11 +61,10 @@ csvSaveF <- function(dataObj,targetfile) {
 ## Load data
 # #############################
 
-#  apportionment rules for ZIP code "00083"
 source_file <- paste0(yearNbr,
                       ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),
                       "00_nyc_whole-data-set.csv"
-                      )
+)
 X <- read.csv(paste0("Data/",source_file),
               header=T,
               sep=",",
@@ -87,29 +87,29 @@ ZIPsupress <- which(rownames(X) %in% c("99999"))
 Y <- X[-ZIPsupress,2:14]  # 208 is a supplementary factor among row profiles
 
 # total nbr of counts
-N <- sum(Y)
+cntTot <- sum(Y)
 # frequency matrix
-fij <- Y/N
+fij <- Y/cntTot
 
 # row weights in terms of service calls for each ZIP
 fi <- rowSums(fij)
 # col weights of service call modality accross all ZIPs
-fj <- colSums(fij)  # see that catalanes have the lowest perceived similarity across all spanish regions
+fj <- colSums(fij)
 sum(fi) ; sum(fj) # check = 1
 
 ## Explore table
 
 # Identify & suppress rows (i.e. ZIPs) with no reported SRC
-zeroSRCzip <- labels(fi[round(fi,3)==0]) # identify
+zeroSRCzip <- labels(fi[fi <= 5/cntTot]) # identify
 Y <- Y[!rownames(Y) %in% zeroSRCzip,]  # suppress
-fij <- Y/N
+fij <- Y/cntTot
 fi <- rowSums(fij)
 fj <- colSums(fij)
 rowCentroid <- sqrt(fj) 
 colCentroid <- sqrt(fi)
 
 # #############################
-## Test of independence
+## Test of independence 1
 # #############################
 
 # CAUTION !!
@@ -121,7 +121,7 @@ cat("nbr of cells with count <5:",pbmCntCellLength,"\n")
 # 1/ Pearson chi-square test for significant association (dependence) between row & col categs
 # H0: In the population, the two categorical variables are independent.
 # joint cell counts distr. in 2D contingency table = (row marginals) x (col marginals)
-# DFs = 207x12 = 2484 is not taken into account for test statistics computed by Monte-Carlo simulations.
+# DFs = 180x12 = 2160 is not taken into account for test statistics computed by Monte-Carlo simulations.
 (chiSqResult <- chisq.test(Y,
                            simulate.p.value=T,
                            B=10000)
@@ -132,12 +132,12 @@ cat("nbr of cells with count <5:",pbmCntCellLength,"\n")
 chiSqContrib <- vector(mode="numeric", length=pbmCntCellLength)
 kk <-0
 for (jj in 1:ncol(Y)) {
-    for (ii in 1:nrow(Y)) {
-        if (Y[ii,jj] <5){
-            kk <- kk+1
-            chiSqContrib[kk] <- (chiSqResult$residual[ii,jj])^2 /chiSqResult$statistic 
-        }
+  for (ii in 1:nrow(Y)) {
+    if (Y[ii,jj] <5){
+      kk <- kk+1
+      chiSqContrib[kk] <- (chiSqResult$residual[ii,jj])^2 /chiSqResult$statistic 
     }
+  }
 }  
 
 # # check that sum of all so-calculated contributions to Chi-square = 1
@@ -157,7 +157,23 @@ length(which(chiSqContrib >=0.001))  # result: 8 cells, totally acceptable
 # There is significant association of row and column categorical variables, i.e. we can say that 
 # service calls to NYC 311 does depend on ZIP codes.
 
-# # 2/ Balloon plot
+
+# #############################
+## Test of independence 2 (on ZIPs to be suppressed)
+# #############################
+
+# test that modalities and suppressed ZIP codes hace no association
+U <- X[(rownames(X) %in% zeroSRCzip) & (rowSums(X[,2:14]) != 0),2:14]
+U <- U[,colSums(U) !=0]
+(chiSqResult <- chisq.test(U,
+                           simulate.p.value=T,
+                           B=10000)
+)
+# p-value = 0.054 ;  we cannot reject the null hypothesis and conclude that we can suppress ZIP codes.
+# #############################
+## Balloon plot
+# #############################
+
 # library ("gplots")
 # par(mfrow=c(1,2))
 # dt <- as.table(as.matrix(Y))
@@ -168,8 +184,12 @@ length(which(chiSqContrib >=0.001))  # result: 8 cells, totally acceptable
 #             label = FALSE,
 #             text.size=0.5,
 #             show.margins = T)
-# 
-# # 3/ Mosaic plot
+
+
+# ############################# 
+## Mosaic plot
+# #############################
+
 # mosaicplot(dt,
 #            shade=T,
 #            las=2,
@@ -325,9 +345,9 @@ evalRows2 <- caY$eig[,1]
 
 cumvarexp <- c(100*evalRows[1]/sum(evalRows))
 for (ii in 2:(ncol(Y))) {
-    if(ii==2) cat("Eigenvalues","\t","Cumulative variance (%)\n")
-    cumvarexp <- c(cumvarexp,cumvarexp[ii-1] + 100*evalRows[ii]/sum(evalRows))
-    cat(format(evalRows[ii-1],scientific=T),"\t",round(cumvarexp[ii-1],6),"\n")
+  if(ii==2) cat("Eigenvalues","\t","Cumulative variance (%)\n")
+  cumvarexp <- c(cumvarexp,cumvarexp[ii-1] + 100*evalRows[ii]/sum(evalRows))
+  cat(format(evalRows[ii-1],scientific=T),"\t",round(cumvarexp[ii-1],6),"\n")
 }
 
 
@@ -410,18 +430,18 @@ plottitle=sprintf("Row profiles\' projection in PC1-2 factorial plane")
 plotdata <- data.frame(PC1=-psiZ[,1],PC2=-psiZ[,2],z=rep("",nrow(Z_tmp)))
 #plotdata <- data.frame(PC1=psiZ[,1],PC2=psiZ[,2],z=matrix(rep("",nrow(Z)),nrow=nrow(Z),byrow=T))
 ggplot(data = plotdata) + 
-    theme_bw() +
-    geom_vline(xintercept = 0, col="gray") +
-    geom_hline(yintercept = 0, col="gray") +
-    # geom_text_repel(aes(PC1,PC2,label = z),
-    #                 size=3,
-    #                 point.padding = 0.5,
-    #                 box.padding = unit(0.55, "lines"),
-    #                 segment.size = 0.3,
-    #                 segment.color = 'grey') +
-    geom_point(aes(PC1,PC2,col = factor(borough_col)), size = 2) +
-    scale_color_discrete(name = 'Borough') +
-    labs(title = plottitle)
+  theme_bw() +
+  geom_vline(xintercept = 0, col="gray") +
+  geom_hline(yintercept = 0, col="gray") +
+  # geom_text_repel(aes(PC1,PC2,label = z),
+  #                 size=3,
+  #                 point.padding = 0.5,
+  #                 box.padding = unit(0.55, "lines"),
+  #                 segment.size = 0.3,
+  #                 segment.color = 'grey') +
+  geom_point(aes(PC1,PC2,col = factor(borough_col)), size = 2) +
+  scale_color_discrete(name = 'Borough') +
+  labs(title = plottitle)
 
 par(mfrow = c(1,1))
 
@@ -436,13 +456,321 @@ pcaY <- PCA(Y_ctd,
             quali.sup = NULL, 
             row.w = fi, col.w = NULL, 
             graph = TRUE, axes = c(1,2))
-pcaX$eig
+pcaY$eig
 # etc...
 
 par(mfrow = c(1,1))
+
+Psi <- pcaY$ind$coord # psi matrix
 
 
 #############################################
 ## MCA
 #############################################
+
+## use contingency table W
+W <- X[!rownames(X) %in% c(zeroSRCzip,"99999"),1:19]
+W_bak <- W
+
+## discretize modality counts with bins, containing roughly same number of ZIP codes 
+{
+# HousCond
+summary(W$HousCond)
+bins_HousCond <- c(3,7,13)
+mods_HousCond <- c("VL","L","M","H")
+cat("HousCond:\n   below or equal to",bins_HousCond[1],"RFCs - bin count:",length(which(W$HousCond<=bins_HousCond[1])),"\n")
+cat("   between",bins_HousCond[1]+1,"and",bins_HousCond[2],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[1] & W$HousCond<=bins_HousCond[2])),"\n")
+cat("   between",bins_HousCond[2]+1,"and",bins_HousCond[3],"RFCs- bin count:", length(which(W$HousCond>bins_HousCond[2] & W$HousCond<=bins_HousCond[3])),"\n")
+cat("   above",bins_HousCond[3],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[3])),"\n")
+
+W$HousCond[which(W_bak$HousCond<=bins_HousCond[1])] <- mods_HousCond[1]
+W$HousCond[which(W_bak$HousCond>bins_HousCond[1] & W_bak$HousCond<=bins_HousCond[2])] <- mods_HousCond[2] 
+W$HousCond[which(W_bak$HousCond>bins_HousCond[2] & W_bak$HousCond<=bins_HousCond[3])] <- mods_HousCond[3]
+W$HousCond[which(W_bak$HousCond>bins_HousCond[3])] <- mods_HousCond[4]
+
+W$HousCond <- as.factor(W$HousCond)
+
+# Sani
+summary(W$Sani)
+bins_Sani <- c(18,31,54)
+mods_Sani <- c("L","M","H","VH")
+cat("Sani:\n   below or equal to",bins_Sani[1],"RFCs - bin count:",length(which(W$Sani<=bins_Sani[1])),"\n")
+cat("   between",bins_Sani[1]+1,"and",bins_Sani[2],"RFCs - bin count:", length(which(W$Sani>bins_Sani[1] & W$Sani<=bins_Sani[2])),"\n")
+cat("   between",bins_Sani[2]+1,"and",bins_Sani[3],"RFCs- bin count:", length(which(W$Sani>bins_Sani[2] & W$Sani<=bins_Sani[3])),"\n")
+cat("   above",bins_Sani[3],"RFCs - bin count:", length(which(W$Sani>bins_Sani[3])),"\n")
+
+W$Sani[which(W_bak$Sani<=bins_Sani[1])] <- mods_Sani[1]
+W$Sani[which(W_bak$Sani>bins_Sani[1] & W_bak$Sani<=bins_Sani[2])] <- mods_Sani[2] 
+W$Sani[which(W_bak$Sani>bins_Sani[2] & W_bak$Sani<=bins_Sani[3])] <- mods_Sani[3]
+W$Sani[which(W_bak$Sani>bins_Sani[3])] <- mods_Sani[4]
+
+W$Sani <- as.factor(W$Sani)
+
+# NoiseResid
+summary(W$NoiseResid)
+bins_NoiseResid <- c(29,61,123)
+mods_NoiseResid <- c("L","M","H","VH")
+cat("NoiseResid:\n   below or equal to",bins_NoiseResid[1],"RFCs - bin count:",length(which(W$NoiseResid<=bins_NoiseResid[1])),"\n")
+cat("   between",bins_NoiseResid[1]+1,"and",bins_NoiseResid[2],"RFCs - bin count:", length(which(W$NoiseResid>bins_NoiseResid[1] & W$NoiseResid<=bins_NoiseResid[2])),"\n")
+cat("   between",bins_NoiseResid[2]+1,"and",bins_NoiseResid[3],"RFCs- bin count:", length(which(W$NoiseResid>bins_NoiseResid[2] & W$NoiseResid<=bins_NoiseResid[3])),"\n")
+cat("   above",bins_NoiseResid[3],"RFCs - bin count:", length(which(W$NoiseResid>bins_NoiseResid[3])),"\n")
+
+W$NoiseResid[which(W_bak$NoiseResid<=bins_NoiseResid[1])] <- mods_NoiseResid[1]
+W$NoiseResid[which(W_bak$NoiseResid>bins_NoiseResid[1] & W_bak$NoiseResid<=bins_NoiseResid[2])] <- mods_NoiseResid[2] 
+W$NoiseResid[which(W_bak$NoiseResid>bins_NoiseResid[2] & W_bak$NoiseResid<=bins_NoiseResid[3])] <- mods_NoiseResid[3]
+W$NoiseResid[which(W_bak$NoiseResid>bins_NoiseResid[3])] <- mods_NoiseResid[4]
+
+W$NoiseResid <- as.factor(W$NoiseResid)
+
+# NoiseConst
+summary(W$NoiseConst)
+bins_NoiseConst <- c(1,5,20)
+mods_NoiseConst <- c("VL","L","M","H")
+cat("NoiseConst:\n   below or equal to",bins_NoiseConst[1],"RFCs - bin count:",length(which(W$NoiseConst<=bins_NoiseConst[1])),"\n")
+cat("   between",bins_NoiseConst[1]+1,"and",bins_NoiseConst[2],"RFCs - bin count:", length(which(W$NoiseConst>bins_NoiseConst[1] & W$NoiseConst<=bins_NoiseConst[2])),"\n")
+cat("   between",bins_NoiseConst[2]+1,"and",bins_NoiseConst[3],"RFCs- bin count:", length(which(W$NoiseConst>bins_NoiseConst[2] & W$NoiseConst<=bins_NoiseConst[3])),"\n")
+cat("   above",bins_NoiseConst[3],"RFCs - bin count:", length(which(W$NoiseConst>bins_NoiseConst[3])),"\n")
+
+W$NoiseConst[which(W_bak$NoiseConst<=bins_NoiseConst[1])] <- mods_NoiseConst[1]
+W$NoiseConst[which(W_bak$NoiseConst>bins_NoiseConst[1] & W_bak$NoiseConst<=bins_NoiseConst[2])] <- mods_NoiseConst[2] 
+W$NoiseConst[which(W_bak$NoiseConst>bins_NoiseConst[2] & W_bak$NoiseConst<=bins_NoiseConst[3])] <- mods_NoiseConst[3]
+W$NoiseConst[which(W_bak$NoiseConst>bins_NoiseConst[3])] <- mods_NoiseConst[4]
+
+W$NoiseConst <- as.factor(W$NoiseConst)
+
+# NoiseBiz
+summary(W$NoiseBiz)
+bins_NoiseBiz <- c(3,9,27)
+mods_NoiseBiz <- c("VL","L","M","H")
+cat("NoiseBiz:\n   below or equal to",bins_NoiseBiz[1],"RFCs - bin count:",length(which(W$NoiseBiz<=bins_NoiseBiz[1])),"\n")
+cat("   between",bins_NoiseBiz[1]+1,"and",bins_NoiseBiz[2],"RFCs - bin count:", length(which(W$NoiseBiz>bins_NoiseBiz[1] & W$NoiseBiz<=bins_NoiseBiz[2])),"\n")
+cat("   between",bins_NoiseBiz[2]+1,"and",bins_NoiseBiz[3],"RFCs- bin count:", length(which(W$NoiseBiz>bins_NoiseBiz[2] & W$NoiseBiz<=bins_NoiseBiz[3])),"\n")
+cat("   above",bins_NoiseBiz[3],"RFCs - bin count:", length(which(W$NoiseBiz>bins_NoiseBiz[3])),"\n")
+
+W$NoiseBiz[which(W_bak$NoiseBiz<=bins_NoiseBiz[1])] <- mods_NoiseBiz[1]
+W$NoiseBiz[which(W_bak$NoiseBiz>bins_NoiseBiz[1] & W_bak$NoiseBiz<=bins_NoiseBiz[2])] <- mods_NoiseBiz[2] 
+W$NoiseBiz[which(W_bak$NoiseBiz>bins_NoiseBiz[2] & W_bak$NoiseBiz<=bins_NoiseBiz[3])] <- mods_NoiseBiz[3]
+W$NoiseBiz[which(W_bak$NoiseBiz>bins_NoiseBiz[3])] <- mods_NoiseBiz[4]
+
+W$NoiseBiz <- as.factor(W$NoiseBiz)
+
+# UrbInf
+summary(W$UrbInf)
+bins_UrbInf <- c(33,55,87)
+mods_UrbInf <- c("L","M","H","VH")
+cat("UrbInf:\n   below or equal to",bins_UrbInf[1],"RFCs - bin count:",length(which(W$UrbInf<=bins_UrbInf[1])),"\n")
+cat("   between",bins_UrbInf[1]+1,"and",bins_UrbInf[2],"RFCs - bin count:", length(which(W$UrbInf>bins_UrbInf[1] & W$UrbInf<=bins_UrbInf[2])),"\n")
+cat("   between",bins_UrbInf[2]+1,"and",bins_UrbInf[3],"RFCs- bin count:", length(which(W$UrbInf>bins_UrbInf[2] & W$UrbInf<=bins_UrbInf[3])),"\n")
+cat("   above",bins_UrbInf[3],"RFCs - bin count:", length(which(W$UrbInf>bins_UrbInf[3])),"\n")
+
+W$UrbInf[which(W_bak$UrbInf<=bins_UrbInf[1])] <- mods_UrbInf[1]
+W$UrbInf[which(W_bak$UrbInf>bins_UrbInf[1] & W_bak$UrbInf<=bins_UrbInf[2])] <- mods_UrbInf[2] 
+W$UrbInf[which(W_bak$UrbInf>bins_UrbInf[2] & W_bak$UrbInf<=bins_UrbInf[3])] <- mods_UrbInf[3]
+W$UrbInf[which(W_bak$UrbInf>bins_UrbInf[3])] <- mods_UrbInf[4]
+
+W$UrbInf <- as.factor(W$UrbInf)
+
+# Traffic
+summary(W$Traffic)
+bins_Traffic <- c(24,54,87)
+mods_Traffic <- c("L","M","H","VH")
+cat("Traffic:\n   below or equal to",bins_Traffic[1],"RFCs - bin count:",length(which(W$Traffic<=bins_Traffic[1])),"\n")
+cat("   between",bins_Traffic[1]+1,"and",bins_Traffic[2],"RFCs - bin count:", length(which(W$Traffic>bins_Traffic[1] & W$Traffic<=bins_Traffic[2])),"\n")
+cat("   between",bins_Traffic[2]+1,"and",bins_Traffic[3],"RFCs- bin count:", length(which(W$Traffic>bins_Traffic[2] & W$Traffic<=bins_Traffic[3])),"\n")
+cat("   above",bins_Traffic[3],"RFCs - bin count:", length(which(W$Traffic>bins_Traffic[3])),"\n")
+
+W$Traffic[which(W_bak$Traffic<=bins_Traffic[1])] <- mods_Traffic[1]
+W$Traffic[which(W_bak$Traffic>bins_Traffic[1] & W_bak$Traffic<=bins_Traffic[2])] <- mods_Traffic[2] 
+W$Traffic[which(W_bak$Traffic>bins_Traffic[2] & W_bak$Traffic<=bins_Traffic[3])] <- mods_Traffic[3]
+W$Traffic[which(W_bak$Traffic>bins_Traffic[3])] <- mods_Traffic[4]
+
+W$Traffic <- as.factor(W$Traffic)
+
+# NoiseTraf
+summary(W$NoiseTraf)
+bins_NoiseTraf <- c(4,11,23)
+mods_NoiseTraf <- c("VL","L","M","H")
+cat("NoiseTraf:\n   below or equal to",bins_NoiseTraf[1],"RFCs - bin count:",length(which(W$NoiseTraf<=bins_NoiseTraf[1])),"\n")
+cat("   between",bins_NoiseTraf[1]+1,"and",bins_NoiseTraf[2],"RFCs - bin count:", length(which(W$NoiseTraf>bins_NoiseTraf[1] & W$NoiseTraf<=bins_NoiseTraf[2])),"\n")
+cat("   between",bins_NoiseTraf[2]+1,"and",bins_NoiseTraf[3],"RFCs- bin count:", length(which(W$NoiseTraf>bins_NoiseTraf[2] & W$NoiseTraf<=bins_NoiseTraf[3])),"\n")
+cat("   above",bins_NoiseTraf[3],"RFCs - bin count:", length(which(W$NoiseTraf>bins_NoiseTraf[3])),"\n")
+
+W$NoiseTraf[which(W_bak$NoiseTraf<=bins_NoiseTraf[1])] <- mods_NoiseTraf[1]
+W$NoiseTraf[which(W_bak$NoiseTraf>bins_NoiseTraf[1] & W_bak$NoiseTraf<=bins_NoiseTraf[2])] <- mods_NoiseTraf[2] 
+W$NoiseTraf[which(W_bak$NoiseTraf>bins_NoiseTraf[2] & W_bak$NoiseTraf<=bins_NoiseTraf[3])] <- mods_NoiseTraf[3]
+W$NoiseTraf[which(W_bak$NoiseTraf>bins_NoiseTraf[3])] <- mods_NoiseTraf[4]
+
+W$NoiseTraf <- as.factor(W$NoiseTraf)
+
+# WaterSyst
+summary(W$WaterSyst)
+bins_WaterSyst <- c(19,29,44)
+mods_WaterSyst <- c("L","M","MH","H")
+cat("WaterSyst:\n   below or equal to",bins_WaterSyst[1],"RFCs - bin count:",length(which(W$WaterSyst<=bins_WaterSyst[1])),"\n")
+cat("   between",bins_WaterSyst[1]+1,"and",bins_WaterSyst[2],"RFCs - bin count:", length(which(W$WaterSyst>bins_WaterSyst[1] & W$WaterSyst<=bins_WaterSyst[2])),"\n")
+cat("   between",bins_WaterSyst[2]+1,"and",bins_WaterSyst[3],"RFCs- bin count:", length(which(W$WaterSyst>bins_WaterSyst[2] & W$WaterSyst<=bins_WaterSyst[3])),"\n")
+cat("   above",bins_WaterSyst[3],"RFCs - bin count:", length(which(W$WaterSyst>bins_WaterSyst[3])),"\n")
+
+W$WaterSyst[which(W_bak$WaterSyst<=bins_WaterSyst[1])] <- mods_WaterSyst[1]
+W$WaterSyst[which(W_bak$WaterSyst>bins_WaterSyst[1] & W_bak$WaterSyst<=bins_WaterSyst[2])] <- mods_WaterSyst[2] 
+W$WaterSyst[which(W_bak$WaterSyst>bins_WaterSyst[2] & W_bak$WaterSyst<=bins_WaterSyst[3])] <- mods_WaterSyst[3]
+W$WaterSyst[which(W_bak$WaterSyst>bins_WaterSyst[3])] <- mods_WaterSyst[4]
+
+W$WaterSyst <- as.factor(W$WaterSyst)
+
+# ConsumProt
+summary(W$ConsumProt)
+bins_ConsumProt <- c(5,13,23)
+mods_ConsumProt <- c("VL","L","M","H")
+cat("ConsumProt:\n   below or equal to",bins_ConsumProt[1],"RFCs - bin count:",length(which(W$ConsumProt<=bins_ConsumProt[1])),"\n")
+cat("   between",bins_ConsumProt[1]+1,"and",bins_ConsumProt[2],"RFCs - bin count:", length(which(W$ConsumProt>bins_ConsumProt[1] & W$ConsumProt<=bins_ConsumProt[2])),"\n")
+cat("   between",bins_ConsumProt[2]+1,"and",bins_ConsumProt[3],"RFCs- bin count:", length(which(W$ConsumProt>bins_ConsumProt[2] & W$ConsumProt<=bins_ConsumProt[3])),"\n")
+cat("   above",bins_ConsumProt[3],"RFCs - bin count:", length(which(W$ConsumProt>bins_ConsumProt[3])),"\n")
+
+W$ConsumProt[which(W_bak$ConsumProt<=bins_ConsumProt[1])] <- mods_ConsumProt[1]
+W$ConsumProt[which(W_bak$ConsumProt>bins_ConsumProt[1] & W_bak$ConsumProt<=bins_ConsumProt[2])] <- mods_ConsumProt[2] 
+W$ConsumProt[which(W_bak$ConsumProt>bins_ConsumProt[2] & W_bak$ConsumProt<=bins_ConsumProt[3])] <- mods_ConsumProt[3]
+W$ConsumProt[which(W_bak$ConsumProt>bins_ConsumProt[3])] <- mods_ConsumProt[4]
+
+W$ConsumProt <- as.factor(W$ConsumProt)
+
+# SocServ
+summary(W$SocServ)
+bins_SocServ <- c(2,6,11)
+mods_SocServ <- c("VL","L","M","MH")
+cat("SocServ:\n   below or equal to",bins_SocServ[1],"RFCs - bin count:",length(which(W$SocServ<=bins_SocServ[1])),"\n")
+cat("   between",bins_SocServ[1]+1,"and",bins_SocServ[2],"RFCs - bin count:", length(which(W$SocServ>bins_SocServ[1] & W$SocServ<=bins_SocServ[2])),"\n")
+cat("   between",bins_SocServ[2]+1,"and",bins_SocServ[3],"RFCs- bin count:", length(which(W$SocServ>bins_SocServ[2] & W$SocServ<=bins_SocServ[3])),"\n")
+cat("   above",bins_SocServ[3],"RFCs - bin count:", length(which(W$SocServ>bins_SocServ[3])),"\n")
+
+W$SocServ[which(W_bak$SocServ<=bins_SocServ[1])] <- mods_SocServ[1]
+W$SocServ[which(W_bak$SocServ>bins_SocServ[1] & W_bak$SocServ<=bins_SocServ[2])] <- mods_SocServ[2] 
+W$SocServ[which(W_bak$SocServ>bins_SocServ[2] & W_bak$SocServ<=bins_SocServ[3])] <- mods_SocServ[3]
+W$SocServ[which(W_bak$SocServ>bins_SocServ[3])] <- mods_SocServ[4]
+
+W$SocServ <- as.factor(W$SocServ)
+
+# IAO
+summary(W$IAO)
+bins_IAO <- c(14,23,33)
+mods_IAO <- c("L","M","MH","H")
+cat("IAO:\n   below or equal to",bins_IAO[1],"RFCs - bin count:",length(which(W$IAO<=bins_IAO[1])),"\n")
+cat("   between",bins_IAO[1]+1,"and",bins_IAO[2],"RFCs - bin count:", length(which(W$IAO>bins_IAO[1] & W$IAO<=bins_IAO[2])),"\n")
+cat("   between",bins_IAO[2]+1,"and",bins_IAO[3],"RFCs- bin count:", length(which(W$IAO>bins_IAO[2] & W$IAO<=bins_IAO[3])),"\n")
+cat("   above",bins_IAO[3],"RFCs - bin count:", length(which(W$IAO>bins_IAO[3])),"\n")
+
+W$IAO[which(W_bak$IAO<=bins_IAO[1])] <- mods_IAO[1]
+W$IAO[which(W_bak$IAO>bins_IAO[1] & W_bak$IAO<=bins_IAO[2])] <- mods_IAO[2] 
+W$IAO[which(W_bak$IAO>bins_IAO[2] & W_bak$IAO<=bins_IAO[3])] <- mods_IAO[3]
+W$IAO[which(W_bak$IAO>bins_IAO[3])] <- mods_IAO[4]
+
+W$IAO <- as.factor(W$IAO)
+
+# EnvProt
+summary(W$EnvProt)
+bins_EnvProt <- c(16,26,41)
+mods_EnvProt <- c("L","M","MH","H")
+cat("EnvProt:\n   below or equal to",bins_EnvProt[1],"RFCs - bin count:",length(which(W$EnvProt<=bins_EnvProt[1])),"\n")
+cat("   between",bins_EnvProt[1]+1,"and",bins_EnvProt[2],"RFCs - bin count:", length(which(W$EnvProt>bins_EnvProt[1] & W$EnvProt<=bins_EnvProt[2])),"\n")
+cat("   between",bins_EnvProt[2]+1,"and",bins_EnvProt[3],"RFCs- bin count:", length(which(W$EnvProt>bins_EnvProt[2] & W$EnvProt<=bins_EnvProt[3])),"\n")
+cat("   above",bins_EnvProt[3],"RFCs - bin count:", length(which(W$EnvProt>bins_EnvProt[3])),"\n")
+
+W$EnvProt[which(W_bak$EnvProt<=bins_EnvProt[1])] <- mods_EnvProt[1]
+W$EnvProt[which(W_bak$EnvProt>bins_EnvProt[1] & W_bak$EnvProt<=bins_EnvProt[2])] <- mods_EnvProt[2] 
+W$EnvProt[which(W_bak$EnvProt>bins_EnvProt[2] & W_bak$EnvProt<=bins_EnvProt[3])] <- mods_EnvProt[3]
+W$EnvProt[which(W_bak$EnvProt>bins_EnvProt[3])] <- mods_EnvProt[4]
+
+W$EnvProt <- as.factor(W$EnvProt)
+
+# Violation
+summary(W$Violation)
+bins_Violation <- c(7,20,38)
+mods_Violation <- c("L","M","MH","H")
+cat("Violation:\n   below or equal to",bins_Violation[1],"RFCs - bin count:",length(which(W$Violation<=bins_Violation[1])),"\n")
+cat("   between",bins_Violation[1]+1,"and",bins_Violation[2],"RFCs - bin count:", length(which(W$Violation>bins_Violation[1] & W$Violation<=bins_Violation[2])),"\n")
+cat("   between",bins_Violation[2]+1,"and",bins_Violation[3],"RFCs- bin count:", length(which(W$Violation>bins_Violation[2] & W$Violation<=bins_Violation[3])),"\n")
+cat("   above",bins_Violation[3],"RFCs - bin count:", length(which(W$Violation>bins_Violation[3])),"\n")
+
+W$Violation[which(W_bak$Violation<=bins_Violation[1])] <- mods_Violation[1]
+W$Violation[which(W_bak$Violation>bins_Violation[1] & W_bak$Violation<=bins_Violation[2])] <- mods_Violation[2] 
+W$Violation[which(W_bak$Violation>bins_Violation[2] & W_bak$Violation<=bins_Violation[3])] <- mods_Violation[3]
+W$Violation[which(W_bak$Violation>bins_Violation[3])] <- mods_Violation[4]
+
+W$Violation <- as.factor(W$Violation)
+
+# Misdemeanor
+summary(W$Misdemeanor)
+bins_Misdemeanor <- c(33,87,178)
+mods_Misdemeanor <- c("M","H","VH","OC")
+cat("Misdemeanor:\n   below or equal to",bins_Misdemeanor[1],"RFCs - bin count:",length(which(W$Misdemeanor<=bins_Misdemeanor[1])),"\n")
+cat("   between",bins_Misdemeanor[1]+1,"and",bins_Misdemeanor[2],"RFCs - bin count:", length(which(W$Misdemeanor>bins_Misdemeanor[1] & W$Misdemeanor<=bins_Misdemeanor[2])),"\n")
+cat("   between",bins_Misdemeanor[2]+1,"and",bins_Misdemeanor[3],"RFCs- bin count:", length(which(W$Misdemeanor>bins_Misdemeanor[2] & W$Misdemeanor<=bins_Misdemeanor[3])),"\n")
+cat("   above",bins_Misdemeanor[3],"RFCs - bin count:", length(which(W$Misdemeanor>bins_Misdemeanor[3])),"\n")
+
+W$Misdemeanor[which(W_bak$Misdemeanor<=bins_Misdemeanor[1])] <- mods_Misdemeanor[1]
+W$Misdemeanor[which(W_bak$Misdemeanor>bins_Misdemeanor[1] & W_bak$Misdemeanor<=bins_Misdemeanor[2])] <- mods_Misdemeanor[2] 
+W$Misdemeanor[which(W_bak$Misdemeanor>bins_Misdemeanor[2] & W_bak$Misdemeanor<=bins_Misdemeanor[3])] <- mods_Misdemeanor[3]
+W$Misdemeanor[which(W_bak$Misdemeanor>bins_Misdemeanor[3])] <- mods_Misdemeanor[4]
+
+W$Misdemeanor <- as.factor(W$Misdemeanor)
+
+# Felony
+summary(W$Felony)
+bins_Felony <- c(17,45,91)
+mods_Felony <- c("ML","M","H","VH")
+cat("Felony:\n   below or equal to",bins_Felony[1],"RFCs - bin count:",length(which(W$Felony<=bins_Felony[1])),"\n")
+cat("   between",bins_Felony[1]+1,"and",bins_Felony[2],"RFCs - bin count:", length(which(W$Felony>bins_Felony[1] & W$Felony<=bins_Felony[2])),"\n")
+cat("   between",bins_Felony[2]+1,"and",bins_Felony[3],"RFCs- bin count:", length(which(W$Felony>bins_Felony[2] & W$Felony<=bins_Felony[3])),"\n")
+cat("   above",bins_Felony[3],"RFCs - bin count:", length(which(W$Felony>bins_Felony[3])),"\n")
+
+W$Felony[which(W_bak$Felony<=bins_Felony[1])] <- mods_Felony[1]
+W$Felony[which(W_bak$Felony>bins_Felony[1] & W_bak$Felony<=bins_Felony[2])] <- mods_Felony[2] 
+W$Felony[which(W_bak$Felony>bins_Felony[2] & W_bak$Felony<=bins_Felony[3])] <- mods_Felony[3]
+W$Felony[which(W_bak$Felony>bins_Felony[3])] <- mods_Felony[4]
+
+W$Felony <- as.factor(W$Felony)
+}
+cat("Active categorical factors:",names(W[which(sapply(W, is.factor))]),"\n")
+length(names(W[which(sapply(W, is.factor))]))
+
+par(mfrow=c(1,1))
+
+mcaNYC311 <- MCA(W,ncp=5,
+               quanti.sup=c(18,19),
+               quali.sup=c(1),
+               excl=NULL,
+               graph = T,
+               level.ventil = 0.00,
+               axes = c(1,2),
+               row.w = NULL,
+               method="Indicator",
+               na.method="NA",
+               tab.disj=NULL)
+plot.MCA(mcaNYC311,
+         choix="ind",
+         autoLab="yes",
+         cex=0.8,
+         col.ind = "blue", col.var = "red", col.quali.sup = "darkgreen",
+         col.ind.sup = "darkblue", col.quanti.sup = "blue",
+         label = c("var","quali.sup","quanti.sup"),
+         habillage=c(1),
+         #palette=palette(rainbow(30))
+         )
+summary(mcaNYC311,nbelements=12)
+
+fviz_mca_ind(mcaNYC311,
+             axes = c(1, 2),
+             geom="point",
+             col.ind = "cos2",
+             label="none", habillage=c(1),   # specifies index of factor var in data, used for color and ellipses
+             addEllipses=TRUE, ellipse.level=0.95)
+fviz_mca_ind(mcaNYC311,
+             axes = c(1, 2),
+             geom="point",
+             col.ind = "cos2")
+
+
+
+
+
 
