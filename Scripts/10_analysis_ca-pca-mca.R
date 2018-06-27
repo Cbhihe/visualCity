@@ -34,7 +34,7 @@ source(file="Scripts/00_nyc311_input-parameters.R",
 
 setRepositories(ind = c(1:6,8))
 library(FactoMineR)     # to use canned PCA and CA methods. 
-
+require(factoextra)     # to use enhanced graph functions
 require(graphics)       # enhanced graphics
 library(ggplot2)        # to enhance graph plotting
 library(ggrepel)        # to plot with well behaved labeling
@@ -457,20 +457,36 @@ pcaY <- PCA(Y_ctd,
             row.w = fi, col.w = NULL, 
             graph = TRUE, axes = c(1,2))
 pcaY$eig
+Psi <- pcaY$ind$coord # psi matrix
 # etc...
 
 par(mfrow = c(1,1))
-
-Psi <- pcaY$ind$coord # psi matrix
 
 
 #############################################
 ## MCA
 #############################################
 
-## use contingency table W
+source_file <- paste0(yearNbr,
+                      ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),
+                      "00_nyc_whole-data-set.csv")
+X <- read.csv(paste0("Data/",source_file),
+              header=T,
+              sep=",",
+              quote="\"",
+              dec=".",
+              skip=0)
+rownames(X) <- X[,1]; X <- X[,-1]
+X <- X[!rownames(X) %in% c("99999"),]  # 208 is a supplementary factor among row profiles
+cntTot <- sum(X[,2:14])  # total nbr of counts
+fij <- X[,2:14]/cntTot  # frequency matrix
+fi <- rowSums(fij) # row weights in terms of service calls for each ZIP
+zeroSRCzip <- labels(fi[fi <= 5/cntTot]) # Identify & suppress rows (i.e. ZIPs) with no reported SRC
+
 W <- X[!rownames(X) %in% c(zeroSRCzip,"99999"),1:19]
 W_bak <- W
+W <- cbind(Borough=as.factor(as.character(unlist(W$Borough))),W[,-1])
+levels(W$Borough)  # check that "99999" has disappeared as level and observation
 
 ## discretize modality counts with bins, containing roughly same number of ZIP codes 
 {
@@ -730,8 +746,108 @@ W$Felony[which(W_bak$Felony>bins_Felony[3])] <- mods_Felony[4]
 
 W$Felony <- as.factor(W$Felony)
 }
+
 cat("Active categorical factors:",names(W[which(sapply(W, is.factor))]),"\n")
 length(names(W[which(sapply(W, is.factor))]))
+
+## Boroughs' Crime Index tables and bar plots
+par(mfrow = c(1,3))
+
+# VIOLATIONS
+crimeDistScale <- c("L","M","MH","H")
+(BCIviol <- with(W,table(Borough,Violation))[,order(match(colnames(with(W,table(Borough,Violation))),
+                                                          crimeDistScale ))])
+summar <- summary(W$Violation)
+tableColName <- c()
+for (cc in crimeDistScale) {
+    tableColName <- c(tableColName,paste(cc,summar[labels(summar)==cc]))
+}
+colnames(BCIviol) <- tableColName
+
+BCIviol_norm <- sweep(BCIviol,1,margin.table(BCIviol,1),"/") # row-wise normalized market segmentation for each brand
+#BCIviol_norm <- prop.table(BCIviol,1)  # same as above
+apply(BCIviol_norm,1,function(x) sum(x)) # check that all rows sum up to 1
+#BCIviol_norm <- BCIviol_norm[order(BCIviol_norm[,4],-BCIviol_norm[,1]),]
+BCIviol_norm = t(BCIviol_norm)  # transpose to be able to use stacked barplot
+
+title=paste0('Violations (',sum(W_bak$Violation),')\n(April 2014)')
+barplot(round(BCIviol_norm*100,0),
+        ylab="Normalized segmentation (%)",
+        main=title,
+        sub="",
+        las=2,
+        cex.names=0.9,
+        col=c("blue","cyan","yellow","orange"),
+        xlim=c(0, ncol(BCIviol_norm) +2),  # make space for legend
+        legend.text = T,
+        args.legend=list(
+            x=ncol(BCIviol_norm) +4,
+            y=100,
+            bty = "n" # box type around legend
+        ))
+
+# MISDEMEANORS
+crimeDistScale <- c("M","H","VH","OC")
+(BCImisd <- with(W,table(Borough,Misdemeanor))
+    [,order(match(colnames(with(W,table(Borough,Misdemeanor))),crimeDistScale))])
+
+summar <- summary(W$Misdemeanor)
+tableColName <- c()
+for (cc in crimeDistScale) {
+    tableColName <- c(tableColName,paste(cc,summar[labels(summar)==cc]))
+}
+colnames(BCImisd) <- tableColName
+
+BCImisd_norm <- sweep(BCImisd,1,margin.table(BCImisd,1),"/") # row-wise normalized market segmentation for each brand
+apply(BCImisd_norm,1,function(x) sum(x)) # check that all rows sum up to 1
+BCImisd_norm = t(BCImisd_norm)  # transpose to be able to use stacked barplot
+
+title=paste0('Misdemeanors (',sum(W_bak$Misdemeanor),')\n(April 2014)')
+barplot(round(BCImisd_norm*100,0),
+        #ylab="Normalized segmentation (%)",
+        main=title,
+        sub="",
+        las=2,
+        cex.names=0.9,
+        col=c("cyan","orange","red","darkred"),
+        xlim=c(0, ncol(BCImisd_norm) + 2),  # make space for legend
+        legend.text = T,
+        args.legend=list(
+            x=ncol(BCImisd_norm) +4,
+            y=100,
+            bty = "n" # box type around legend
+        ))
+
+# FELONIES
+crimeDistScale <- c("ML","M","H","VH")
+(BCIfelon <- with(W,table(Borough,Felony))[,order(match(colnames(with(W,table(Borough,Felony))),
+                                                        crimeDistScale))])
+summar <- summary(W$Felony)
+tableColName <- c()
+for (cc in crimeDistScale) {
+    tableColName <- c(tableColName,paste(cc,summar[labels(summar)==cc]))
+}
+colnames(BCIfelon) <- tableColName
+
+BCIfelon_norm <- sweep(BCIfelon,1,margin.table(BCIfelon,1),"/") # row-wise normalized market segmentation for each brand
+apply(BCIfelon_norm,1,function(x) sum(x)) # check that all rows sum up to 1
+BCIfelon_norm = t(BCIfelon_norm)  # transpose to be able to use stacked barplot
+
+title=paste0('Felonies (',sum(W_bak$Felony),')\n(April 2014)')
+barplot(round(BCIfelon_norm*100,0),
+        #ylab="Normalized segmentation (%)",
+        main=title,
+        sub="",
+        las=2,
+        cex.names=0.9,
+        col=c("#009999","cyan","orange","red"),
+        xlim=c(0, ncol(BCIfelon_norm) + 2),  # make space for legend
+        legend.text = T,
+        args.legend=list(
+            x=ncol(BCIfelon_norm) +4,
+            y=100,
+            bty = "n" # box type around legend
+        ))
 
 par(mfrow=c(1,1))
 
@@ -746,6 +862,10 @@ mcaNYC311 <- MCA(W,ncp=5,
                method="Indicator",
                na.method="NA",
                tab.disj=NULL)
+
+summary(mcaNYC311,nbelements=12)
+dimdesc(mcaNYC311)
+
 plot.MCA(mcaNYC311,
          choix="ind",
          autoLab="yes",
@@ -753,10 +873,9 @@ plot.MCA(mcaNYC311,
          col.ind = "blue", col.var = "red", col.quali.sup = "darkgreen",
          col.ind.sup = "darkblue", col.quanti.sup = "blue",
          label = c("var","quali.sup","quanti.sup"),
-         habillage=c(1),
+         habillage=c(1)
          #palette=palette(rainbow(30))
          )
-summary(mcaNYC311,nbelements=12)
 
 fviz_mca_ind(mcaNYC311,
              axes = c(1, 2),
@@ -764,10 +883,13 @@ fviz_mca_ind(mcaNYC311,
              col.ind = "cos2",
              label="none", habillage=c(1),   # specifies index of factor var in data, used for color and ellipses
              addEllipses=TRUE, ellipse.level=0.95)
+
 fviz_mca_ind(mcaNYC311,
              axes = c(1, 2),
              geom="point",
              col.ind = "cos2")
+
+
 
 
 
