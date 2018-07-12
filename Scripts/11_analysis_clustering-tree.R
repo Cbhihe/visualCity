@@ -1,8 +1,8 @@
 # #############################
-## MIRI/MVA   :     Analysis of NYC-311 Service Request Calls
-## Author:          Cedric Bhihe
-## Delivery:        2018.06.28
-## Script:          11_analysis_clustering-tree.R
+## MIRI:        Analysis of NYC-311 Service Request Calls
+## Author:      Cedric Bhihe
+## Date:        Summer 2018
+## Script:      11_analysis_clustering-tree.R
 # #############################
 
 
@@ -403,7 +403,7 @@ fviz_pca_biplot(pcaYsimple,
 par(mfrow = c(1,1))
 
 # ########################
-## ind plot by hand
+## Plot of individuals' projection - by hand
 # ########################
 
 Z <- X[!rownames(X) %in% zeroSRCzip,1:14]  # suppress
@@ -436,15 +436,15 @@ psiZ <- Z_tmp %*% evecsZ  # matrix of scores, values of each individual's p comp
 colnames(psiZ) <- paste0("PC",1:ncol(psiZ))
 rownames(psiZ) <- rownames(Z_ctd)
 
-borough_col=as.factor(Z_ctd[,1])
-
+Boroughs <- as.factor(Z_ctd[,1])
+rm(Z_tmp)
 
 par(mfrow = c(1,1))
 
 plottitle=sprintf("Row profiles\' projection in PC1-2 factorial plane")
 plotdata <- data.frame(PC1=-psiZ[,1],PC2=-psiZ[,2],z=rep("",nrow(Z_tmp)))
 #plotdata <- data.frame(PC1=psiZ[,1],PC2=psiZ[,2],z=matrix(rep("",nrow(Z)),nrow=nrow(Z),byrow=T))
-ggplot(data = plotdata) + 
+plot1 <- ggplot(data = plotdata) + 
     theme_bw() +
     geom_vline(xintercept = 0, col="gray") +
     geom_hline(yintercept = 0, col="gray") +
@@ -454,9 +454,12 @@ ggplot(data = plotdata) +
     #                 box.padding = unit(0.55, "lines"),
     #                 segment.size = 0.3,
     #                 segment.color = 'grey') +
-    geom_point(aes(PC1,PC2,col = factor(borough_col)), size = 2) +
+    geom_point(aes(PC1,PC2,col=Boroughs),size = 2) +
     scale_color_discrete(name = 'Borough') +
     labs(title = plottitle)
+
+plot1 +
+    scale_color_manual(values=ccolors[1:length(levels(Boroughs))])
 
 par(mfrow = c(1,1))
 
@@ -498,6 +501,7 @@ pcaYsimple.rot <- varimax(pcaYsimple$var$cor[,1:ndSimple])
 pcaYsimple.rot
 
 Zs <- scale(apply(Z_ctd[,-1],2,as.numeric),center=T,scale=F)
+rownames(Zs) <-rownames(Z_ctd) 
 sd_var <- apply(Zs,2,sd)
 
 p <- ncol(Zs) 
@@ -519,7 +523,8 @@ plot(Phi.rot,
      type="n",
      xlim=c(1.2*min(Phi.rot[,1]),1.2*max(Phi.rot[,1])),
      ylim=c(1.2*min(Phi.rot[,2]),1.2*max(Phi.rot[,2])),
-     main=plottitle, sub=subtitle)
+     #main=plottitle, 
+     sub=subtitle)
 text(Phi.rot,labels=tags, col="blue", pos=1)
 arrows(axes_orig, axes_orig, Phi.rot[,1], Phi.rot[,2], length = 0.07,col="blue")
 abline(h=0,v=0,col="gray")
@@ -527,9 +532,84 @@ grid()
 
 
 # ########################
-## Topographic plot of color-coded ZIPs according to varimax'ed PC1-2 projections  
+## Topographic plot of color-coded ZIPs according to varimax'ed PC1-2 projections
 # ########################
+library("rgdal", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")      # to read shapefile (translate GPS into ZIP)
+library("fastshp", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")
+library("colorspace")
+#pal <- choose_palette()
 
+# Use zipped achive at https://data.cityofnewyork.us/Business/Zip-Code-Boundaries/i8iw-xf4u
+mapZIP <- readOGR(dsn="./Data/Geolocation", layer="ZIP_CODE_040114")
+shp <- read.shp("Data/Geolocation/ZIP_CODE_040114.shp", format="list")
+
+ZIP_lst <- c(); ZIP_lst <- c(rownames(Zs),zeroSRCzip,"10463")
+#tail(ZIP_lst,27)
+# retrieve mapZIP's ZIP indices to be mapped
+mapZIP_idx <- which(mapZIP$ZIPCODE %in% ZIP_lst)
+
+mapZIPborough <- c()
+for (index in mapZIP_idx) {
+    mapZIPborough <- c(mapZIPborough,as.character(X[as.character(mapZIP$ZIPCODE[index]) == rownames(X),1]))
+                    }
+mapZIPborough <- as.factor(as.numeric(as.factor(mapZIPborough)))
+# Compute & plot overall area bounding box
+xMinBox <- c() ; yMinBox <- c() ; xMaxBox <- c() ; yMaxBox <- c();
+for (index in mapZIP_idx) {
+    xMinBox <- c(xMinBox,shp[[index]]$box[1])
+    yMinBox <- c(yMinBox,shp[[index]]$box[2])
+    xMaxBox <- c(xMaxBox,shp[[index]]$box[3])
+    yMaxBox <- c(yMaxBox,shp[[index]]$box[4])
+}
+
+xMin <- min(xMinBox); yMin <- min(yMinBox)
+xMax <- max(xMaxBox); yMax <- max(yMaxBox)
+
+# color-code ZIP codes according to quadrant position on PC1-2 row profile projection 
+# coordinates are: x=-psiZ[,1]; y=-psiZ[,2]
+# 1st quadrant x>=0, y>=0  ---- lightblue
+# 2nd quadrant x<=0, y>=0  ---- springgreen
+# 3rd quadrant x<=0, y<=0  ---- tan
+# 4th quadrant x>=0, y<=0  ---- red 
+zipQuadrant <- ifelse(-psiZ[,1] >=0,ifelse(-psiZ[,2] >=0,"lightblue","red"),ifelse(-psiZ[,2] >=0,"springgreen","tan"))
+zipWeight <- fi[-ind.sup_idx] / max(fi[-ind.sup_idx])
+
+# draw initial ghost ZIP perimeter
+plottitle <- "Mapped NYC ZIP codes (5 boroughs)"
+plot(x=c((xMin+xMax)/2),y=c((yMin+yMax)/2),
+     xlim=c(xMin,xMax),ylim=c(yMin,yMax),
+     type="p",pch=".",col="darkgreen",xlab="plane x",ylab="plane y", main=plottitle)
+
+for ( ii in 1:length(mapZIP_idx) ) {
+    index <- mapZIP_idx[ii]
+    #lines(shp[[index]]$x, shp[[index]]$y,type="l",col="skyblue",xlab="x",ylab="y") # draw ZIP perimeter
+    lines(shp[[index]]$x, shp[[index]]$y,type="l",col=ccolors[mapZIPborough[ii]],xlab="x",ylab="y") # draw ZIP perimeter
+
+        # lines(c(shp[[index]]$box[1],shp[[index]]$box[1],shp[[index]]$box[3],shp[[index]]$box[3],shp[[index]]$box[1]),
+    #       c(shp[[index]]$box[2],shp[[index]]$box[4],shp[[index]]$box[4],shp[[index]]$box[2],shp[[index]]$box[2]),
+    #       type="l", lwd=1,col="red") # draw ZIP box
+    
+    # put zip code string at the center of each zip area bounding box 
+    localZIP <- mapZIP$ZIPCODE[index]
+    # text(x=(xMinBox[ii]+xMaxBox[ii])/2,
+    #      y=(yMinBox[ii]+yMaxBox[ii])/2,
+    #      adj=0.5,labels=localZIP,
+    #      col="steelblue",
+    #      cex=0.5)
+    
+    if (as.character(localZIP) %in% rownames(Z_ctd)) {
+        print(ii)
+        points(x=(xMinBox[ii]+xMaxBox[ii])/2,y=(yMinBox[ii]+yMaxBox[ii])/2,
+               type = "p",
+               col = as.character(zipQuadrant[which(labels(zipQuadrant) == as.character(localZIP))]),
+               bg = as.character(zipQuadrant[which(labels(zipQuadrant) == as.character(localZIP))]),
+               pch = 21,
+               cex = 3 * as.numeric(zipWeight[which(labels(zipWeight) == as.character(localZIP))]),
+               alpha=I(1/5)
+        )
+    }
+}
+legend("topleft",legend=levels(Boroughs),lwd=2,col=ccolors[1:length(levels(Boroughs))])
 
 
 

@@ -1,13 +1,13 @@
 # #############################
-## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
-## Author:          Cedric Bhihe, Santi Calvo
-## Delivery:        2018.06.26
-## Script:          03_apportion-ghost-zip_prep.R
+## MIRI:        Analysis of NYC-311 Service Request Calls
+## Author:      Cedric Bhihe
+## Date:        Summer 2018
+## Script:      03_apportion-ghost-zip_prep.R
 # #############################
 
 
 rm(list=ls(all=TRUE))
-setwd("~/Documents/Work/Academic-research/NYC-complaints/")
+setwd("~/Documents/Work/Academic-research/NYC311/")
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
@@ -61,8 +61,9 @@ source(file="Scripts/00_nyc311_input-parameters.R",
 
 data("zipcode") # load US zip data
 ZIP_lst <- c(unlist(zipcode[zipcode$state=="NY",1]),
-             c("00083","10004","10018","10024","10029","10032","10036","10309","10459","10463","10469","10472","11103", "11207",
-               "11210", "11221","11229","11235","11368","11379","11385","11421","11435","11694"))
+             c("00083","10004","10018","10024","10029","10032","10036","10309","10459","10463",
+               "10469","10472","11103", "11207","11210", "11221","11229","11235","11368","11379",
+               "11385","11421","11435","11694"))
 # NY State ZIP codes include:
 #   ZIP "00083" is unofficial for Central Park and consists of small of big portions of ZIP codes:
 #        10019, 10065, 10023, 10021, 10075, 10028, 10024, 10128, 10025, 10029, 10026
@@ -83,7 +84,7 @@ shp <- read.shp("Data/Geolocation/ZIP_CODE_040114.shp", format="list")
 neighborZIP <- c("10019","10022","10065","10023","10021","10075","10028","10024","10128","10025","10029","10026")
 ghostZIP <- "00083"
 
-ghostZIP_idx <- which(mapZIP$ZIPCODE==ghostZIP)  # index for ZIP "00083" is 55 
+ghostZIP_idx <- which(mapZIP$ZIPCODE == ghostZIP)  # index for ZIP "00083" is 55 
 neighborZIP_idx <- c()
 for (nn in 1:length(neighborZIP)) neighborZIP_idx <- c(neighborZIP_idx, which(mapZIP$ZIPCODE == neighborZIP[nn]))
 
@@ -101,8 +102,8 @@ xMax <- max(xMaxBox); yMax <- max(yMaxBox)
 plottitle <- "NYC ZIP codes neighboring with \"00083\""
 
 # draw initial ghost ZIP perimeter
-plot(shp[[ghostZIP_idx]]$x, shp[[ghostZIP_idx]]$y,
-     xlim=c(xMin,xMax), ylim=c(yMin,yMax),
+plot(shp[[ghostZIP_idx]]$x,shp[[ghostZIP_idx]]$y,
+     xlim=c(xMin,xMax),ylim=c(yMin,yMax),
      type="l",col="darkgreen",xlab="plane x",ylab="plane y", main=plottitle)
 
 for (ii in 1:length(c(ghostZIP_idx,neighborZIP_idx))) {
@@ -116,7 +117,7 @@ for (ii in 1:length(c(ghostZIP_idx,neighborZIP_idx))) {
           c(shp[[index]]$box[2],shp[[index]]$box[4],shp[[index]]$box[4],shp[[index]]$box[2],shp[[index]]$box[2]),
           type="l", lwd=1,col=ifelse(ii==1,"green","red")) # draw ZIP box
     
-    # put zip code string at the center of each zip area bouding box 
+    # put zip code string at the center of each zip area bounding box 
     localZIP <- ifelse(nchar(c(ghostZIP,neighborZIP)[ii]) <5,
                        paste0(formatC(as.numeric(c(ghostZIP,neighborZIP)[ii]),width=5,flag="0")),
                        as.character(c(ghostZIP,neighborZIP)[ii]))
