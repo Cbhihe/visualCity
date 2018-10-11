@@ -1,21 +1,22 @@
 # #############################
-## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
-## Author:          Cedric Bhihe, Santi Calvo
-## Delivery:        2018.06.26
-## Script:          01_nyc311_data-prep.R
+## Project:     Analysis of NYC-311 Service Requests
+## Script:      02_nyc311_data-prep.R
+## Author:      Cedric Bhihe
+## Delivery:    January 2019
+## Last edit:   
 # #############################
 
 rm(list=ls(all=TRUE))
 
-# ############################################
-## Environment and env. var.
-# ############################################
+# #############################
+
+setwd("~/Documents/Work/Academic-research/NYC311/")
 
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 set.seed(932178)
-setwd("~/Documents/Work/Academic-research/NYC-complaints/")
 ccolors=c("blue","red","green","orange","cyan","tan1","darkred","honeydew2","violetred",
           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
+
 datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
 
 
@@ -53,7 +54,7 @@ addMonthF <- function(date,n) {
 # #############################
 ## Source parameter file
 # #############################
-source(file="Scripts/00_nyc311_input-parameters.R",
+source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...
 
 periodStart <- as.Date(paste0(yearNbr,"-",

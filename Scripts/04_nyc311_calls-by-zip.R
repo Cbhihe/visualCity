@@ -1,14 +1,16 @@
 # #############################
-## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
-## Author:          Cedric Bhihe, Santi Calvo
-## Delivery:        2018.06.26
-## Script:          04_nyc311_calls-by-zip.R
+## Project:     Analysis of NYC-311 Service Requests
+## Script:      04_nyc311_calls-by-zip.R
+## Author:      Cedric Bhihe
+## Delivery:    January 2019
+## Last edit:   
 # #############################
-
 
 rm(list=ls(all=TRUE))
 
-setwd("~/Documents/Work/Academic-research/NYC-complaints/")
+# #############################
+
+setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
@@ -44,7 +46,8 @@ csvSaveF <- function(dataObj,targetfile) {
 # #############################
 ## Source parameter file
 # #############################
-source(file="Scripts/00_nyc311_input-parameters.R",
+
+source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...
 
 

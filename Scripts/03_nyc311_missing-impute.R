@@ -1,21 +1,31 @@
 # #############################
-## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
-## Author:          Cedric Bhihe, Santi Calvo
-## Delivery:        2018.06.26
-## Script:          02_nyc311_missing-impute.R
+## Project:     Analysis of NYC-311 Service Requests
+## Script:      03_nyc311_missing-impute.R
+## Author:      Cedric Bhihe
+## Delivery:    January 2019
+## Last edit:   
 # #############################
-
 
 rm(list=ls(all=TRUE))
 
-setwd("~/Documents/Work/Academic-research/NYC-complaints/")
-set.seed(932178)
+# #############################
 
+setwd("~/Documents/Work/Academic-research/NYC311/")
+
+set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
+datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S")
+
+
+# #############################
+## Source parameter file
+# #############################
+source(file="Scripts/01_nyc311_input-parameters.R",
+       local=F,echo=F)  # Year, Month, Day, ...
+
 
 # #############################
 ## Libraries
@@ -28,6 +38,279 @@ library("zipcode")    # Load all valid us ZIPs  <<<<<<< OUTDATED,
 # library("rgdal", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")      # to read shapefile (translate GPS into ZIP)
 # library("fastshp", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")
 
+
+# #############################
+## Functions
+# #############################
+csvSaveF <- function(dataObj,targetfile) {
+    write.table(dataObj,
+                targetfile,
+                append=F,
+                sep=",",
+                eol="\n",
+                na ="NA",
+                dec=".",
+                row.names=F,
+                col.names=T)
+}    # save cvs to file
+
+addMonthF <- function(date,n) {
+    seq(date,by=paste(n,"months"), length = 2)[2]
+}      # time calculations
+
+urlF <- function(address,latlng,return.call="json",sensor="false",key=my_APIkey) {
+    ## URL encoding function 
+    root_url <- "https://maps.googleapis.com/maps/api/geocode/"
+    if ( latlng != "" ) {
+        u <- paste0(root_url, return.call, "?latlng=", latlng, "&sensor=", sensor,"&key=",my_APIkey)
+    } else {
+        address <- tolower(address)
+        u <- paste0(root_url, return.call, "?address=", address, "&sensor=", sensor,"&key=",my_APIkey)
+    }
+    return(URLencode(u))   # in package "utils", to percent-encode characters in URLs.
+}
+
+geoCodeF <- function(address,
+                     latlng,
+                     verbose,
+                     Nquery,
+                     bounds=NULL,
+                     key = my_APIkey,
+                     language = "en",
+                     region = NULL,
+                     components = NULL,
+                     simplify = F,
+                     curl_proxy = NULL) {
+    
+    ## Google Maps API query function
+    #' @param verbose logical (boolean), defaults to 'FALSE'
+    #' @param address \code{string}. Street address to pass to geocode, in format
+    #   used by the national postal service of the country concerned... 'address'
+    #   can also consist of two intersecting streets, e.g.:
+    #   intersect_1 <- "EAST 15 STREET"
+    #   intersect_2 <- "2 AVENUE"
+    #   address <- paste0(intersect_1," + ",intersect_2,", New York,NY, USA")
+    #' @param latlng \code{list}. Contains 1 o more pairs of lat/lon coordinates
+    #   latlng <- list(c(lat1,lon1),c(lat2,lon2),c(lat3,lon3), ...)  
+    #' @param bounds list of two, each element is a vector of lat/lon coordinates
+    #   representing the south-west and north-east bounding box, e.g.:
+    #   bounds <- list(c(34.172684,-118.604794),c(34.236144,-118.500938))
+    #' @param language \code{string}. Specifies the language in which to return the results.
+    #   See the list of supported languages:
+    #   \url{https://developers.google.com/maps/faq#using-google-maps-apis}. If no
+    #   language is supplied, the service will attempt to use the language of the domain
+    #   from which the request was sent
+    #' @param region \code{string}. Specifies the region code, specified as a ccTLD
+    #   ("top-level domain"). For details, see:
+    #   \url{https://developers.google.com/maps/documentation/directions/intro#RegionBiasing}
+    #' @param key \code{string}. A valid Google Developers Geocode API key
+    #' @param components \code{data.frame} of two columns, component and value. Restricts
+    #   the results to a specific area. One or more of "route","locality","administrative_area",
+    #   "postal_code","country", e.g.:
+    #   components <- data.frame(component = c("postal_code", "country"),value = c("3000", "AU"))
+    #' @param simplify \code{logical} - TRUE indicates the returned JSON will be coerced into a list. 
+    #                                 - FALSE indicates the returend JSON will be returned as a string
+    #' @param curl_proxy a curl proxy object
+    #' @return Either list or JSON string of the geocoded address
+    
+    if (! exists("verbose", mode="logical") ) verbose=F   # default
+    if(verbose) cat("Address:",address,"\nLat-Long:",latlng,"\n")
+    
+    if ( latlng != "" ) {
+        u <- urlF(address="",latlng)
+        doc <- getURL(u)
+        Nquery <- Nquery +1
+        ## Doc -- "location_type" :
+        # "ROOFTOP" indicates that the returned result is a precise geocode for which we have location
+        # information accurate down to street address precision.
+        # "RANGE_INTERPOLATED" indicates that the returned result reflects an approximation (usually on
+        # a road) interpolated between two precise points (such as intersections). Interpolated results 
+        # are generally returned when rooftop geocodes are unavailable for a street address.
+        # "GEOMETRIC_CENTER" indicates that the returned result is the geometric center of a result such
+        # as a polyline (for example, a street) or polygon (region).
+        # "APPROXIMATE" indicates that the returned result is approximate.
+        Sys.sleep(APIsleep)
+    } else if ( address != "" ) {
+        u <- urlF(address,latlng="")
+        doc <- getURL(u)
+        Nquery <- Nquery +1
+        Sys.sleep(APIsleep)
+    } else {
+        u <- ""
+        doc <- ""
+        stop("\n-------------------------\nEither a valid address or GPS data is required.\n-------------------------\n")
+    }
+    
+    x <- fromJSON(doc,simplify = FALSE)  
+    ## simplify = c(TRUE,FALSE,Strict,StrictCharacter,StrictLogical,StrictNumeric)
+    # 'Strict' means 'StrictCharacter+StrictLogical+StrictNumeric'
+    # Any pair-wise combination of (StrictCharacter,StrictLogical,StrictNumeric) with the '+' 
+    # operator is possible.
+    
+    if(x$status=="OK") {
+        lat <- x$results[[1]]$geometry$location$lat
+        lng <- x$results[[1]]$geometry$location$lng
+        location_type  <- x$results[[1]]$geometry$location_type
+        formatted_address  <- x$results[[1]]$formatted_address
+        
+        sep_loc <- as.numeric(gregexpr(pattern =', usa$',formatted_address,ignore.case=T))
+        res_zip <- regexpr("^[0123456789]{5}$",substr(formatted_address,sep_loc-5,sep_loc-1),perl=TRUE,fixed=FALSE)
+        
+        if (res_zip != "-1") {
+            zip <- as.character(grep("^[0123456789]{5}$",substr(formatted_address,sep_loc-5,sep_loc-1),
+                                     perl=TRUE,
+                                     fixed=FALSE,
+                                     inv=FALSE,
+                                     value=TRUE))
+            fail_token <- 0
+        } else {
+            zip <-""
+            fail_token=1
+        }
+        return(c(zip, as.character(lat), as.character(lng), fail_token,as.numeric(Nquery)))
+        
+    } else { fail_token=1; return(c("","","",fail_token,as.numeric(Nquery))) }
+}
+
+# Translation of GPS or cartesian coordinates in ZIP codes
+whichBoxF <- function(x0,y0,shape) {
+    
+    if ( !is.list(shape) | !is.numeric(x0) | !is.numeric(y0) ) {
+        cat("Arg type error in function whichBoxF().\nArgs should be of type \"numeric\",\"numeric\",\"shape\".\n\n")
+        stop
+    } else {
+        
+        index_lst <- c()
+        # #############
+        ## MALFORMED POLYGONS 
+        # #############
+        shp[[178]]$x <- shp[[178]]$x[1:276]; shp[[178]]$y <- shp[[178]]$y[1:276]
+        # #############
+        
+        for ( bb in 1:length(shape) ){
+            # Note: shp[[bb]]$box   is vector c(Xmin,Ymin,Xmax,Ymax)
+            # if inside the box, keep ZIP code index `bb`
+            if ( x0 >= shp[[bb]]$box[1] & 
+                 y0 >= shp[[bb]]$box[2] & 
+                 x0 <= shp[[bb]]$box[3] & 
+                 y0 <= shp[[bb]]$box[4] ) index_lst <- c(index_lst,bb) }
+        
+        if (length(index_lst) == 0) {
+            # cat("... no ZIP found\n")
+            index <- NA
+        } else if (length(index_lst)==1) {
+            # cat("... only one ZIP found\n")
+            index <- index_lst[1]
+        } else {
+            bb_IN <- c()
+            for (bb in index_lst) {
+                # scan area over perimeter's x and y coordinates simultaneously
+                # polygon's perimeter identified by index `bb` 
+                # cflagx, pflagx -- current and previous flags for x scan
+                # cflagy, pflagy -- current and previous flags for y scan
+                
+                xintercepts <- c(); yintercepts <- c()
+                pflagx <- 0; cflagx <- 0
+                pflagy <- 0; cflagy <- 0
+                
+                for (ii in 1:length(shape[[bb]]$x)) {
+                    # for (ii in 1:200) {
+                    #   ii <- ii+1
+                    if (ii != 1) { pflagx = cflagx ;  pflagy = cflagy }
+                    cflagx <- ifelse( x0 <= shape[[bb]]$x[ii], +1, -1 )
+                    cflagy <- ifelse( y0 <= shape[[bb]]$y[ii], +1, -1 )
+                    
+                    if (ii == 1) { pflagx = cflagx; pflagy = cflagy }
+                    
+                    if (cflagx * pflagx < 0) {
+                        # change of flagx's sign
+                        # retrieve previous point's coordinates (xp,yp)
+                        xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
+                        # retrieve current point's coordinates (xc,yc)
+                        xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
+                        # compute polygon's boundary's y intercept
+                        if( x0 != xc ) {
+                            y <- (yc*(x0-xp) +yp*(xc-x0))/(xc-xp)
+                            yintercepts <- c(yintercepts,y)
+                        } else {
+                            # in case the POI (x0,y0) belongs to ZIP area boundary
+                            y <- yc*(x0-xp)/(xc-xp)
+                            yintercepts <- c(yintercepts,y-1,y+1)
+                        }
+                    }
+                    
+                    if (cflagy * pflagy < 0) {
+                        # change of flagy's sign
+                        # retrieve previous point's coordinates (xp,yp)
+                        xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
+                        # retrieve current point's coordinates (xc,yc)
+                        xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
+                        # compute polygon's boundary's y intercept
+                        if (y0 != yc) {
+                            x <- (xc*(y0-yp) +xp*(yc-y0))/(yc-yp)
+                            xintercepts <- c(xintercepts,x)
+                        } else {
+                            # in case the POI (x0,y0) belongs to ZIP area boundary
+                            x <- xc*(y0-yp)/(yc-yp)
+                            xintercepts <- c(xintercepts,x-1,x+1)
+                        }
+                    }
+                    
+                }
+                # nbr of intercepts always even or nil for closed perimeters
+                stopifnot(length(xintercepts) %% 2 == 0 & length(yintercepts) %% 2 == 0)
+                # check whether (x0,y0) is IN or OUT (redundant on x and y for consistency)
+                # (x0,y0) is IN if:
+                #    nbr of x-intercepts < x0    AND
+                #    nbr of x-intercepts > x0    AND
+                #    nbr of y-intercepts < y0    AND
+                #    nbr of y-intercepts > y0
+                # are all odd
+                if (length(xintercepts[xintercepts < x0]) %% 2 == 1 &
+                    length(yintercepts[yintercepts < y0]) %% 2 == 1) bb_IN <- c(bb_IN,bb)
+            }
+            
+            if( length( bb_IN) == 0) {
+                index <- NA
+            } else if ( length( bb_IN) == 1 ) {
+                index <- bb
+            } else {
+                # compute smallest box and pick coresponding index
+                boxareas <- c()
+                for (bb in bb_IN) {
+                    boxareas <- c(boxareas,( shp[[bb]]$box[3] - shp[[bb]]$box[1] ) * ( shp[[bb]]$box[4] - shp[[bb]]$box[2]) )
+                }
+                index <- bb_IN[ which (boxareas == min(boxareas)) ]
+            }
+        }
+        
+        
+        # Algorithm below works but does not discriminate well
+        #   alpha <- c()  # scanned angles
+        #   Dist2 <- c()  # scanned radii squared  (computed from (x0,y0) to scanned perimeter)
+        #   for (bb in index_lst) {
+        #     
+        #     for (ii in length(shape[[bb]]$x)) {
+        #       alpha <- c(alpha,round(acos((shape[[bb]]$x[ii]-x0)/sqrt((shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2))/pi,5))
+        #       Dist2 <- c( Dist2 , (shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2 )  }
+        #     
+        #     aRange <- c(aRange,max(alpha)-min(alpha))  # keep alpha ranges
+        #     scannedDist2 <- c(scannedDist2, mean(Dist2))
+        #   }
+        #   
+        #   locRes <- list( ZIPindex = index_lst, alphaRange = aRange , meanScanRadius = scannedDist2)
+        # 
+        #   aRange_max <- max(locRes$alphaRange)
+        #   meanScanRadius_min <- min(locRes$meanScanRadius)
+        #   small_list_index_lst <- which( (aRange_max - locRes$alphaRange ) / aRange_max <= 0.02 )  # meta-index or "index of index"
+        #   if (length(small_list_index_lst) > 1 ) {
+        #     index <- locRes$ZIPindex[small_list_index_lst[ which(locRes$meanScanRadius[small_list_index_lst] == min(locRes$meanScanRadius[small_list_index_lst]) ) ]]
+        #   } else { 
+        #     index <- index_lst[1] 
+        #   }
+        # returns index in `mapZIP$ZIPCODE` list
+    }
+}    # query for cartesian coordinates to get correponding NYC ZIP codes
 
 
 # #############################
@@ -54,287 +337,6 @@ ZIP_lst <- ZIP_lst[ which( ! strtrim(ZIP_lst,3) %in% c("005","063") ) ]
 #        10019, 10065, 10023, 10021, 10075, 10028, 10024, 10128, 10025, 10029, 10026
 #   "00501" and "00544" for  Holtsville, Suffolk County  (type: unique)
 #   "00690" for Fishers Island, Fishers Isle, Suffolk County  (type: PO Box)
-
-
-# #############################
-## Functions
-# #############################
-csvSaveF <- function(dataObj,targetfile) {
-  write.table(dataObj,
-              targetfile,
-              append=F,
-              sep=",",
-              eol="\n",
-              na ="NA",
-              dec=".",
-              row.names=F,
-              col.names=T)
-}    # save cvs to file
-
-addMonthF <- function(date,n) {
-  seq(date,by=paste(n,"months"), length = 2)[2]
-}      # time calculations
-
-urlF <- function(address,latlng,return.call="json",sensor="false",key=my_APIkey) {
-  ## URL encoding function 
-  root_url <- "https://maps.googleapis.com/maps/api/geocode/"
-  if ( latlng != "" ) {
-    u <- paste0(root_url, return.call, "?latlng=", latlng, "&sensor=", sensor,"&key=",my_APIkey)
-  } else {
-    address <- tolower(address)
-    u <- paste0(root_url, return.call, "?address=", address, "&sensor=", sensor,"&key=",my_APIkey)
-  }
-  return(URLencode(u))   # in package "utils", to percent-encode characters in URLs.
-}
-
-geoCodeF <- function(address,
-                     latlng,
-                     verbose,
-                     Nquery,
-                     bounds=NULL,
-                     key = my_APIkey,
-                     language = "en",
-                     region = NULL,
-                     components = NULL,
-                     simplify = F,
-                     curl_proxy = NULL) {
-
-  ## Google Maps API query function
-  #' @param verbose logical (boolean), defaults to 'FALSE'
-  #' @param address \code{string}. Street address to pass to geocode, in format
-  #   used by the national postal service of the country concerned... 'address'
-  #   can also consist of two intersecting streets, e.g.:
-  #   intersect_1 <- "EAST 15 STREET"
-  #   intersect_2 <- "2 AVENUE"
-  #   address <- paste0(intersect_1," + ",intersect_2,", New York,NY, USA")
-  #' @param latlng \code{list}. Contains 1 o more pairs of lat/lon coordinates
-  #   latlng <- list(c(lat1,lon1),c(lat2,lon2),c(lat3,lon3), ...)  
-  #' @param bounds list of two, each element is a vector of lat/lon coordinates
-  #   representing the south-west and north-east bounding box, e.g.:
-  #   bounds <- list(c(34.172684,-118.604794),c(34.236144,-118.500938))
-  #' @param language \code{string}. Specifies the language in which to return the results.
-  #   See the list of supported languages:
-  #   \url{https://developers.google.com/maps/faq#using-google-maps-apis}. If no
-  #   language is supplied, the service will attempt to use the language of the domain
-  #   from which the request was sent
-  #' @param region \code{string}. Specifies the region code, specified as a ccTLD
-  #   ("top-level domain"). For details, see:
-  #   \url{https://developers.google.com/maps/documentation/directions/intro#RegionBiasing}
-  #' @param key \code{string}. A valid Google Developers Geocode API key
-  #' @param components \code{data.frame} of two columns, component and value. Restricts
-  #   the results to a specific area. One or more of "route","locality","administrative_area",
-  #   "postal_code","country", e.g.:
-  #   components <- data.frame(component = c("postal_code", "country"),value = c("3000", "AU"))
-  #' @param simplify \code{logical} - TRUE indicates the returned JSON will be coerced into a list. 
-  #                                 - FALSE indicates the returend JSON will be returned as a string
-  #' @param curl_proxy a curl proxy object
-  #' @return Either list or JSON string of the geocoded address
-  
-  if (! exists("verbose", mode="logical") ) verbose=F   # default
-  if(verbose) cat("Address:",address,"\nLat-Long:",latlng,"\n")
-  
-  if ( latlng != "" ) {
-    u <- urlF(address="",latlng)
-    doc <- getURL(u)
-    Nquery <- Nquery +1
-    ## Doc -- "location_type" :
-    # "ROOFTOP" indicates that the returned result is a precise geocode for which we have location
-    # information accurate down to street address precision.
-    # "RANGE_INTERPOLATED" indicates that the returned result reflects an approximation (usually on
-    # a road) interpolated between two precise points (such as intersections). Interpolated results 
-    # are generally returned when rooftop geocodes are unavailable for a street address.
-    # "GEOMETRIC_CENTER" indicates that the returned result is the geometric center of a result such
-    # as a polyline (for example, a street) or polygon (region).
-    # "APPROXIMATE" indicates that the returned result is approximate.
-    Sys.sleep(APIsleep)
-  } else if ( address != "" ) {
-    u <- urlF(address,latlng="")
-    doc <- getURL(u)
-    Nquery <- Nquery +1
-    Sys.sleep(APIsleep)
-  } else {
-    u <- ""
-    doc <- ""
-    stop("\n-------------------------\nEither a valid address or GPS data is required.\n-------------------------\n")
-  }
-  
-  x <- fromJSON(doc,simplify = FALSE)  
-  ## simplify = c(TRUE,FALSE,Strict,StrictCharacter,StrictLogical,StrictNumeric)
-  # 'Strict' means 'StrictCharacter+StrictLogical+StrictNumeric'
-  # Any pair-wise combination of (StrictCharacter,StrictLogical,StrictNumeric) with the '+' 
-  # operator is possible.
-  
-  if(x$status=="OK") {
-    lat <- x$results[[1]]$geometry$location$lat
-    lng <- x$results[[1]]$geometry$location$lng
-    location_type  <- x$results[[1]]$geometry$location_type
-    formatted_address  <- x$results[[1]]$formatted_address
-    
-    sep_loc <- as.numeric(gregexpr(pattern =', usa$',formatted_address,ignore.case=T))
-    res_zip <- regexpr("^[0123456789]{5}$",substr(formatted_address,sep_loc-5,sep_loc-1),perl=TRUE,fixed=FALSE)
-    
-    if (res_zip != "-1") {
-      zip <- as.character(grep("^[0123456789]{5}$",substr(formatted_address,sep_loc-5,sep_loc-1),
-                               perl=TRUE,
-                               fixed=FALSE,
-                               inv=FALSE,
-                               value=TRUE))
-      fail_token <- 0
-    } else {
-      zip <-""
-      fail_token=1
-    }
-    return(c(zip, as.character(lat), as.character(lng), fail_token,as.numeric(Nquery)))
-    
-  } else { fail_token=1; return(c("","","",fail_token,as.numeric(Nquery))) }
-}
-
-# Translation of GPS or cartesian coordinates in ZIP codes
-whichBoxF <- function(x0,y0,shape) {
-  
-  if ( !is.list(shape) | !is.numeric(x0) | !is.numeric(y0) ) {
-    cat("Arg type error in function whichBoxF().\nArgs should be of type \"numeric\",\"numeric\",\"shape\".\n\n")
-    stop
-  } else {
-    
-    index_lst <- c()
-    # #############
-    ## MALFORMED POLYGONS 
-    # #############
-    shp[[178]]$x <- shp[[178]]$x[1:276]; shp[[178]]$y <- shp[[178]]$y[1:276]
-    # #############
-    
-    for ( bb in 1:length(shape) ){
-      # Note: shp[[bb]]$box   is vector c(Xmin,Ymin,Xmax,Ymax)
-      # if inside the box, keep ZIP code index `bb`
-      if ( x0 >= shp[[bb]]$box[1] & 
-           y0 >= shp[[bb]]$box[2] & 
-           x0 <= shp[[bb]]$box[3] & 
-           y0 <= shp[[bb]]$box[4] ) index_lst <- c(index_lst,bb) }
-    
-    if (length(index_lst) == 0) {
-      # cat("... no ZIP found\n")
-      index <- NA
-    } else if (length(index_lst)==1) {
-      # cat("... only one ZIP found\n")
-      index <- index_lst[1]
-    } else {
-      bb_IN <- c()
-      for (bb in index_lst) {
-        # scan area over perimeter's x and y coordinates simultaneously
-        # polygon's perimeter identified by index `bb` 
-        # cflagx, pflagx -- current and previous flags for x scan
-        # cflagy, pflagy -- current and previous flags for y scan
-        
-        xintercepts <- c(); yintercepts <- c()
-        pflagx <- 0; cflagx <- 0
-        pflagy <- 0; cflagy <- 0
-        
-        for (ii in 1:length(shape[[bb]]$x)) {
-          # for (ii in 1:200) {
-          #   ii <- ii+1
-          if (ii != 1) { pflagx = cflagx ;  pflagy = cflagy }
-          cflagx <- ifelse( x0 <= shape[[bb]]$x[ii], +1, -1 )
-          cflagy <- ifelse( y0 <= shape[[bb]]$y[ii], +1, -1 )
-          
-          if (ii == 1) { pflagx = cflagx; pflagy = cflagy }
-          
-          if (cflagx * pflagx < 0) {
-            # change of flagx's sign
-            # retrieve previous point's coordinates (xp,yp)
-            xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
-            # retrieve current point's coordinates (xc,yc)
-            xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
-            # compute polygon's boundary's y intercept
-            if( x0 != xc ) {
-              y <- (yc*(x0-xp) +yp*(xc-x0))/(xc-xp)
-              yintercepts <- c(yintercepts,y)
-            } else {
-              # in case the POI (x0,y0) belongs to ZIP area boundary
-              y <- yc*(x0-xp)/(xc-xp)
-              yintercepts <- c(yintercepts,y-1,y+1)
-            }
-          }
-          
-          if (cflagy * pflagy < 0) {
-            # change of flagy's sign
-            # retrieve previous point's coordinates (xp,yp)
-            xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
-            # retrieve current point's coordinates (xc,yc)
-            xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
-            # compute polygon's boundary's y intercept
-            if (y0 != yc) {
-              x <- (xc*(y0-yp) +xp*(yc-y0))/(yc-yp)
-              xintercepts <- c(xintercepts,x)
-            } else {
-              # in case the POI (x0,y0) belongs to ZIP area boundary
-              x <- xc*(y0-yp)/(yc-yp)
-              xintercepts <- c(xintercepts,x-1,x+1)
-            }
-          }
-          
-        }
-        # nbr of intercepts always even or nil for closed perimeters
-        stopifnot(length(xintercepts) %% 2 == 0 & length(yintercepts) %% 2 == 0)
-        # check whether (x0,y0) is IN or OUT (redundant on x and y for consistency)
-        # (x0,y0) is IN if:
-        #    nbr of x-intercepts < x0    AND
-        #    nbr of x-intercepts > x0    AND
-        #    nbr of y-intercepts < y0    AND
-        #    nbr of y-intercepts > y0
-        # are all odd
-        if (length(xintercepts[xintercepts < x0]) %% 2 == 1 &
-            length(yintercepts[yintercepts < y0]) %% 2 == 1) bb_IN <- c(bb_IN,bb)
-      }
-      
-      if( length( bb_IN) == 0) {
-        index <- NA
-      } else if ( length( bb_IN) == 1 ) {
-        index <- bb
-      } else {
-        # compute smallest box and pick coresponding index
-        boxareas <- c()
-        for (bb in bb_IN) {
-          boxareas <- c(boxareas,( shp[[bb]]$box[3] - shp[[bb]]$box[1] ) * ( shp[[bb]]$box[4] - shp[[bb]]$box[2]) )
-        }
-        index <- bb_IN[ which (boxareas == min(boxareas)) ]
-      }
-    }
-    
-    
-    # Algorithm below works but does not discriminate well
-    #   alpha <- c()  # scanned angles
-    #   Dist2 <- c()  # scanned radii squared  (computed from (x0,y0) to scanned perimeter)
-    #   for (bb in index_lst) {
-    #     
-    #     for (ii in length(shape[[bb]]$x)) {
-    #       alpha <- c(alpha,round(acos((shape[[bb]]$x[ii]-x0)/sqrt((shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2))/pi,5))
-    #       Dist2 <- c( Dist2 , (shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2 )  }
-    #     
-    #     aRange <- c(aRange,max(alpha)-min(alpha))  # keep alpha ranges
-    #     scannedDist2 <- c(scannedDist2, mean(Dist2))
-    #   }
-    #   
-    #   locRes <- list( ZIPindex = index_lst, alphaRange = aRange , meanScanRadius = scannedDist2)
-    # 
-    #   aRange_max <- max(locRes$alphaRange)
-    #   meanScanRadius_min <- min(locRes$meanScanRadius)
-    #   small_list_index_lst <- which( (aRange_max - locRes$alphaRange ) / aRange_max <= 0.02 )  # meta-index or "index of index"
-    #   if (length(small_list_index_lst) > 1 ) {
-    #     index <- locRes$ZIPindex[small_list_index_lst[ which(locRes$meanScanRadius[small_list_index_lst] == min(locRes$meanScanRadius[small_list_index_lst]) ) ]]
-    #   } else { 
-    #     index <- index_lst[1] 
-    #   }
-    # returns index in `mapZIP$ZIPCODE` list
-  }
-}    # query for cartesian coordinates to get correponding NYC ZIP codes
-
-
-# #############################
-## Source parameter file
-# #############################
-source(file="Scripts/00_nyc311_input-parameters.R",
-       local=F,echo=F)  # Year, Month, Day, ...
 
 
 # #############################
@@ -861,6 +863,7 @@ cat("Nbr of unique ZIPs in dataset:",length(unique(as.character(unlist(protoY$ZI
 # #############################
 # Save processed csv file as `*_proc03.csv`
 # #############################
+
 proc_file <- source_file
 target_file <- paste0("Data/",proc_file,"03.csv") 
 csvSaveF(protoY,target_file)     # csv to disk

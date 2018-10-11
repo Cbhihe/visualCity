@@ -1,25 +1,40 @@
 # #############################
-##  Project:  Geographical Analysis of NYC 311 Service Requests (April 2014 vs April 2015)  
-##  Authors:  Cedric Bhihe, Santi Calvo
-##  Delivery: 2018.06.26
-##  Script:   06_nypd_data-prep.R
+##  Project:    Analysis of NYC 311 Service Requests 
+##  Script:     06_nypd_data-prep.R
+##  Author:     Cedric Bhihe
+##  Delivery:   January 2019
+## Last edit:   
 # #############################
-
-
-# ############################################
-## Environment and env. var.
-# ############################################
 
 rm(list=ls(all=TRUE))
 
-setwd("~/Documents/Work/Academic-research/NYC-complaints/")
-set.seed(932178)
+# #############################
 
+setwd("~/Documents/Work/Academic-research/NYC311/")
+
+set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 
 datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
+
+
+# #############################
+## Input parameters
+# #############################
+source(file="Scripts/01_nyc311_input-parameters.R",
+       local=F,echo=F)  # Year, Month, Day, ...
+
+periodStart <- as.Date(paste0(yearNbr,"-",
+                              ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
+                              ifelse(dayNbr<10,paste0("0",as.character(dayNbr)),as.character(dayNbr))))
+
+daysInMonth <- as.numeric(difftime(addMonthF(periodStart,1),periodStart))
+
+periodEnd <- as.Date(paste0(yearNbr,"-",
+                            ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
+                            daysInMonth))
 
 
 # #############################
@@ -33,6 +48,7 @@ library("rgdal", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")      # to read s
 #library("maptools", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")
 library("fastshp", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")
 library("ggplot2", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")
+
 
 # #############################
 ## Functions
@@ -204,23 +220,6 @@ ZIP_lst <- c(unlist(zipcode[zipcode$state=="NY",1]),
              c("99999","00083","10004","10018","10024","10029","10032","10036","10309","10459","10463","10469","10472","11103", "11207",
                "11210", "11221","11229","11235","11368","11379","11385","11421","11435","11694"))
 ZIP_lst <- ZIP_lst[which( !strtrim(ZIP_lst,3) %in% c("005","063"))]
-
-
-# #############################
-## Source parameter file
-# #############################
-source(file="Scripts/00_nyc311_input-parameters.R",
-       local=F,echo=F)  # Year, Month, Day, ...
-
-periodStart <- as.Date(paste0(yearNbr,"-",
-                              ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
-                              ifelse(dayNbr<10,paste0("0",as.character(dayNbr)),as.character(dayNbr))))
-
-daysInMonth <- as.numeric(difftime(addMonthF(periodStart,1),periodStart))
-
-periodEnd <- as.Date(paste0(yearNbr,"-",
-                            ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
-                            daysInMonth))
 
 
 # #############################

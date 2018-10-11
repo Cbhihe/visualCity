@@ -1,8 +1,9 @@
 # #############################
-## MIRI Project:    Geosociological Analysis of NYC-311 Service Requests
-## Author:          Cedric Bhihe
-## Delivery:        2018.06.26
-## Script:          00_nyc311_input-parameters.R
+## Project:     Analysis of NYC-311 Service Requests
+## Script:      01_nyc311_input-parameters.R
+## Author:      Cedric Bhihe
+## Delivery:    January 2019
+## Last edit:   September 2018
 # #############################
 
 
@@ -27,12 +28,7 @@ monthNbr <- 4
 dayNbr <- 1
 
 # #############################
-## Miscellanea
+## 
 # #############################
-set.seed(932178)
-
-options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 
 datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S")
