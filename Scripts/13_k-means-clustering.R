@@ -237,7 +237,8 @@ plot(colMeans(in_over_tot),
      ylim=c(0,1),
      type="b",
      col="blue",
-     main="Selection of optimal number of clusters by k-means\n(April 2014 NYC data)")
+     main=paste0("Selection of optimal number of clusters by k-means\n(",
+                 month.name[monthNbr]," ",yearNbr," NYC data)"))
 axis(2,ylim=c(0,1),col='black',col.axis='black',las=1)
 mtext('Normalized within-cluster SS',col='blue',side=2,line=2.5)
 # 2nd plot
