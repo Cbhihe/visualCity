@@ -9,20 +9,13 @@
 rm(list=ls(all=TRUE))
 
 # #############################
+## Source parameter file
+# #############################
 
 setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
-
-
-# #############################
-## Source parameter file
-# #############################
 
 source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...setwd("~/Documents/Work/Academic-research/NYC-complaints/")
@@ -57,6 +50,9 @@ csvSaveF <- function(dataObj,targetfile) {
               col.names=T)
 }    # save cvs to file
 
+exit <- function() {
+    .Internal(.invokeRestart(list(NULL, NULL), NULL))
+}    # exit function. Use with caution: not standard, depends on OS's internals
 
 # #############################
 ## Load data
@@ -153,7 +149,7 @@ chiSqContribTest
 length(which(chiSqContrib >=0.01))   # result: 0 cells, good
 length(which(chiSqContrib >=0.001))  # result: 8 cells, totally acceptable
 
-# Final conclusion
+# Final conclusion for April 2010 and April 2014
 # chi-sq=43294; p =~ 1e-4; We can reject the null hypothesis at the risk 1% of erring
 # There is significant association of row and column categorical variables, i.e. we can say that
 # service calls to NYC 311 does depend on ZIP codes.
@@ -170,9 +166,21 @@ U <- U[,colSums(U) !=0]
                            simulate.p.value=T,
                            B=10000)
 )
+
+# April 2010
+# Nbr of cells to supress: 453
+# p-value =~ 0.316 >> 0.01;  so again we cannot reject the null hypothesis (H0) and conclude that we the
+# suppressed ZIP codes have a random structure wrt to SRCs' modalities.
+
+# April 2014
+# Nbr of cells to supress: ~ 520
 # p-value =~ 0.0071 < 0.01;  so again we reject the null hypothesis (H0) and conclude that we the
 # suppressed ZIP codes have a non random structure wrt to SRCs' modalities.
 
+# April 2018
+# Nbr of cells to supress: 
+# p-value =~ ____ < 0.01;  so again we reject the null hypothesis (H0) and conclude that we the
+# suppressed ZIP codes have a non random structure wrt to SRCs' modalities.
 
 # #############################
 ## Balloon plot
@@ -245,7 +253,9 @@ evecCols <- eigZcols$vectors        # eigenvectors
 evalCols <- eigZcols$values         # eigenvalues  same first 12 eigenvalues as evalRows
 
 # ##############################
-## Detect outlier "10463" for April 2014 data
+## Detect outlier "10281" for April 2010 data ?? maybe
+## Detect outlier "10463" for April 2014 data ?? confirmed
+## Detect outlier "_____" for April 2018 data ?? __
 # ##############################
 
 dev.off()
@@ -264,7 +274,17 @@ pcaY <- PCA(Y_ctd,
 )
 pcaY$eig   
 
-ind.sup_idx = which(rownames(Y_ctd) %in% c("10463"))
+if (yearNbr == 2010) {
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("10281"))  # April 2010
+} else if (yearNbr == 2014) {
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("10463"))  # April 2014
+} else if (yearNbr == 2018) {
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("____"))   # April 2018
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
+
 pcaY <- PCA(Y_ctd,
             ncp=5,
             scale.unit=F,
@@ -292,7 +312,6 @@ pcaY <- PCA(Y_ctd,
             graph = T, axes = c(1,3)
 )
 
-ind.sup_idx = which(rownames(Y_ctd) %in% c("10463"))
 pcaY <- PCA(Y_ctd,
             ncp=5,
             scale.unit=F,
@@ -319,7 +338,6 @@ pcaY <- PCA(Y_ctd,
             graph = T, axes = c(2,3)
 )
 
-ind.sup_idx = which(rownames(Y_ctd) %in% c("10463"))
 pcaY <- PCA(Y_ctd,
             ncp=5,
             scale.unit=F,
@@ -339,7 +357,7 @@ par(mfrow = c(1,1))
 # 1/ Point successively to every component of the list of evals sorted by decreasing value 
 # 2/ When total explained inertia exceeds 70% chose eval index as nbr of significant dims
 n_dim <- ncol(Y_ctd)-1
-for (nd in 1:n_dim) {  if(pcaY$eig[nd,3] > 70) break  }
+for (nd in 1:n_dim) {  if(pcaY$eig[nd,3] > 72) break  }
 cat("Number of significant dimensions:",nd)
 
 
@@ -371,7 +389,17 @@ par(mfrow = c(2,2))
 # |_ quality of representation (cos2) in 1st 3 dimensions is bad.
 
 # PC1-2 factorial plane
-ind.sup_idx = which(rownames(Y) %in% c("99999","10463"))
+if (yearNbr == 2010) {
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("99999","10281"))  # April 2010
+} else if (yearNbr == 2014) {
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("99999","10463"))  # April 2014
+} else if (yearNbr == 2018) {
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("99999","____"))   # April 2018
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
+
 plottitle <- paste0("CA factor map: ",month.abb[monthNbr],".",yearNbr,
                     " NYC311 SRC data/n(before feature selection)")
 caY <- CA(Y,
@@ -488,8 +516,17 @@ tab <- round(caY$row$contrib[,1:3],1) # col profiles contributions to 1st 3 PCs.
 (maxCtrDim1 <- tab[tab[,1] == max(tab[,1]),])   # max contributor to construct of  Dim 1
 (maxCtrDim2 <- tab[tab[,2] == max(tab[,2]),])  # max contributor to construct of  Dim 2
 (maxCtrDim3 <- tab[tab[,3] == max(tab[,3]),])   # max contributor to construct of  Dim 3
-tab[rownames(tab)== "10463",]  # investigate ZIP 10463 (Riverdale)
 
+if (yearNbr == 2010) {
+    tab[rownames(tab)== "10281",]  # April 2010 -- investigate ZIP 10281 (Battery Park City)
+} else if (yearNbr == 2014) {
+    tab[rownames(tab)== "10463",]  # April 2014 -- investigate ZIP 10463 (Riverdale)
+} else if (yearNbr == 2018) {
+    tab[rownames(tab)== "_____",]  # April 2018 -- investigate ZIP _____ ()
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
 
 
 par(mfrow = c(1,2))
@@ -543,21 +580,40 @@ grid()
 
 # ########################
 ## Feature extraction & selection
+if (yearNbr == 2010) {
+    ## April 2010
+    # ########################
+    # "EnvProt" and "WaterSyst" are strongly correlated in PC1-2-3
+    # "IAO", "NoiseTraf" and "SocServ" are weakly correlated with PCs and can be dispensed with.
+    
+    Ysimple <- cbind(HousCond=Y[,1],Y[,2:7],EPwater=Y[,8]+Y[,12],Y[,c(9:11,13)])
+    sup_cols <- c(2,11,12)
+    
+} else if (yearNbr == 2014) {
+    ## April 2014
+    # ########################
+    # "EnvProt" and "Sani"  are weakly correlated with 3 first PCs and are collinear
+    #   => add corresponding frequencies in new feature "EPsani", to decrease dimensionality
+    # EnvProt and WaterSyst appear strongly correlated in planes PC1-2 and PC1-3, but anti-
+    #   correlated in PC2-3. WaterSyst has a poor Inertia Explanatory Power with IEP < 5%
+    #   for the retained significant dimensions.  Eliminate "WaterSyst" to decrease dimensionality.
+    Ysimple <- cbind(HousCond=Y[,1],EPsani=Y[,2]+Y[,13],Y[,3:8],Y[,9:12])
 
-# ########################
-## April 2014
-# ########################
-# "EnvProt" and "Sani"  are weakly correlated with 3 first PCs and are collinear
-#   => add corresponding frequencies in new feature "EPsani", to decrease dimensionality
-# EnvProt and WaterSyst appear strongly correlated in planes PC1-2 and PC1-3, but anti-
-#   correlated in PC2-3. WaterSyst has a poor Inertia Explanatory Power with IEP < 5%
-#   for the retained significant dimensions.  Eliminate "WaterSyst" to decrease dimensionality.
-Ysimple <- cbind(HousCond=Y[,1],EPsani=Y[,2]+Y[,13],Y[,3:8],Y[,9:12])
-# "HousCond" as well as "SocServ" and "IAO" are weakly coorelated with 3 first PCs
-#   and are eliminated. 
-# "ConsumProt" however, although apparently strongly correlated with "NoiseConst" cannot be 
-#   joined with it as no satisfactory justification was found to explain the apparent correlation.  
-sup_cols <- c(1,9,11,12)
+        # "HousCond" as well as "SocServ" and "IAO" are weakly coorelated with 3 first PCs
+    #   and are eliminated. 
+    # "ConsumProt" however, although apparently strongly correlated with "NoiseConst" cannot be 
+    #   joined with it as no satisfactory justification was found to explain the apparent correlation.  
+    sup_cols <- c(1,9,11,12)
+    
+} else if (yearNbr == 2018) {
+    Ysimple <- cbind()
+    sup_cols <- c()
+    
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
+
 
 par(mfrow = c(1,2))
 caYsimple <- CA(Ysimple,
@@ -590,7 +646,7 @@ evalRows <- caYsimple$eig[,1]
 # 1/ Point successively to every component of the list of evals sorted by decreasing value 
 # 2/ When total explained inertia exceeds inertia_threshold (%) chose eval index as nbr of
 #    significant dims
-inertia_threshold=70
+inertia_threshold=72
 n_dim <- ncol(Ysimple) - length(sup_cols)
 for (ndSimple in 1:n_dim) {  if(caYsimple$eig[ndSimple,3] >= inertia_threshold) break  }
 cat("Number of significant dimensions:",ndSimple,"\n")
@@ -668,7 +724,17 @@ tab <- round(caYsimple$row$contrib[,1:3],1) # col profiles contributions to 1st 
 (maxCtrDim1 <- tab[tab[,1] == max(tab[,1]),])   # max contributor to construct of  Dim 1
 (maxCtrDim2 <- tab[tab[,2] == max(tab[,2]),])   # max contributor to construct of  Dim 2
 (maxCtrDim3 <- tab[tab[,3] == max(tab[,3]),])   # max contributor to construct of  Dim 3
-tab[rownames(tab)== "10463",]  # investigate ZIP 10463 (Riverdale)
+
+if (yearNbr == 2010) {
+    tab[rownames(tab)== "10281",]  # April 2010 -- investigate ZIP 10281 (Battery Park City)
+} else if (yearNbr == 2014) {
+    tab[rownames(tab)== "10463",]  # April 2014 -- investigate ZIP 10463 (Riverdale)
+} else if (yearNbr == 2018) {
+    tab[rownames(tab)== "_____",]  # April 2018 -- investigate ZIP _____ ()
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
 
 ## Compute Inertia Explanatory Power (IEP) of each modality
 iep_alldim <- c(); iep_sigdim <- c()
@@ -705,8 +771,9 @@ Ysimple_ctd <- cbind(HousCond=Y_ctd[,1],EPsani=Y_ctd[,2]+Y_ctd[,13],Y_ctd[,3:8],
 ind.sup_idx <- which(rownames(Ysimple_ctd) %in% c("99999","10463"))
 col.sup_idx <- which(colnames(Ysimple_ctd) %in% c("IAO","SocServ","WaterSyst","HousCond"))
 
+componentNbr <- 9
 pcaYsimple <- PCA(Ysimple_ctd,
-                  ncp=8,
+                  ncp=componentNbr,
                   scale.unit=F,
                   ind.sup = ind.sup_idx, 
                   quali.sup = col.sup_idx,
@@ -797,7 +864,7 @@ par(mfrow = c(1,1))
 
 plottitle=sprintf("Row profiles\' projection in PC1-2 factorial plane")
 plottitle <- paste0(plottitle,"\n(",month.abb[monthNbr],". ",yearNbr," SRC data after feature selection)")
-plotdata <- data.frame(PC1=psiZ[,1],PC2=-psiZ[,2],z=rep("",nrow(Z_tmp)))
+plotdata <- data.frame(PC1=psiZ[,1],PC2=psiZ[,2],z=rep("",nrow(Z_tmp)))
 #plotdata <- data.frame(PC1=psiZ[,1],PC2=psiZ[,2],z=matrix(rep("",nrow(Z)),nrow=nrow(Z),byrow=T))
 plot1 <- ggplot(data = plotdata) + 
     theme_bw() +
@@ -833,7 +900,8 @@ for ( bb in unique(as.character(factor(Boroughs))) ) {
         indIEPall <- 0
         indIEPsignif <- 0
         cnt <- cnt+ 1
-        for ( eval_idx in 1:(nrow(pcaYsimple$eig)-1) ) {
+#        for ( eval_idx in 1:(nrow(pcaYsimple$eig)-1) ) {
+        for ( eval_idx in 1:componentNbr ) {
             indIEPall = indIEPall + pcaYsimple$ind$contrib[indiv_idx,eval_idx] * pcaYsimple$eig[eval_idx,2]/100
             if (eval_idx <= ndSimple) {
                 indIEPsignif = indIEPsignif + pcaYsimple$ind$contrib[indiv_idx,eval_idx] * pcaYsimple$eig[eval_idx,2]/100
@@ -887,11 +955,11 @@ xMax <- max(xMaxBox); yMax <- max(yMaxBox)
 
 # color-code ZIP codes according to quadrant position on PC1-2 row profile projection 
 # coordinates are: x=-psiZ[,1]; y=-psiZ[,2]
-# 1st quadrant x>=0, y>=0  ---- skyblue
-# 2nd quadrant x<=0, y>=0  ---- green
+# 1st quadrant x>=0, y>=0  ---- orchid2
+# 2nd quadrant x>=0, y<=0  ---- orangered3
 # 3rd quadrant x<=0, y<=0  ---- tan
-# 4th quadrant x>=0, y<=0  ---- orangered3
-zipQuadrant <- ifelse(psiZ[,1] >=0,ifelse(-psiZ[,2] >=0,"orchid2","orangered3"),ifelse(-psiZ[,2] >=0,"green","tan"))
+# 4th quadrant x<=0, y>=0  ---- green
+zipQuadrant <- ifelse(psiZ[,1] >=0,ifelse(psiZ[,2] >=0,"orchid2","orangered3"),ifelse(psiZ[,2] >=0,"green","tan"))
 zipWeight <- fi[-ind.sup_idx] / max(fi[-ind.sup_idx])
 
 # draw initial ghost ZIP perimeter
@@ -934,7 +1002,13 @@ for ( ii in 1:length(mapZIP_idx) ) {
     }
 }
 legend("topleft",legend=levels(Boroughs),lwd=4,col=ccolors[1:length(levels(Boroughs))])
-
+legend("bottomright",legend=c(1,2,3,4),pch=16,
+       col= c("orchid2","orangered3","tan","green"),
+       horiz=T,
+       title="PC1-2 quadrants:", 
+       bty="n", 
+       pt.cex=1.3, 
+       cex=0.8)
 
 # ########################
 ## Apply varimax to loadings in PC1-2  (MVA slides 03, pp 20~24)
@@ -1012,17 +1086,17 @@ par(mfrow = c(1,1))
 
 plottitle=sprintf("Row profiles\' projection in PC1-2 factorial plane\n(after feature selection and varimax rotation)")
 #plotdata <- data.frame(PC1=scores.rot[,1],PC2=scores.rot[,2],z=rep("",nrow(Zs)))
-plotdata <- data.frame(PC1=scores.rot[,1],PC2=scores.rot[,2],z=rownames(Zs))
+plotdata <- data.frame(PC1=-scores.rot[,1],PC2=-scores.rot[,2],z=rownames(Zs))
 plot1 <- ggplot(data = plotdata) + 
     theme_bw() +
     geom_vline(xintercept = 0, col="gray") +
     geom_hline(yintercept = 0, col="gray") +
-    geom_text_repel(aes(PC1,PC2,label = z),
-                    size=3,
-                    point.padding = 0.5,
-                    box.padding = unit(0.55, "lines"),
-                    segment.size = 0.3,
-                    segment.color = 'grey') +
+    # geom_text_repel(aes(PC1,PC2,label = z),
+    #                 size=3,
+    #                 point.padding = 0.5,
+    #                 box.padding = unit(0.55, "lines"),
+    #                 segment.size = 0.3,
+    #                 segment.color = 'grey') +
     geom_point(aes(PC1,PC2,col=Boroughs),size = 2) +
     scale_color_discrete(name = 'Borough') +
     labs(title = plottitle)
@@ -1121,6 +1195,12 @@ for ( ii in 1:length(mapZIP_idx) ) {
     }
 }
 legend("topleft",legend=levels(Boroughs),lwd=4,col=ccolors[1:length(levels(Boroughs))])
-
+legend("bottomright",legend=c("PC1+","PC2+","PC1-","PC2-"),pch=16,
+       col= c("orchid2","green","tan","orangered3"),
+       horiz=T,
+       title="PC1-2 conic sectors:", 
+       bty="n", 
+       pt.cex=1.3, 
+       cex=0.8)
 
 # ########################

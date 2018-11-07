@@ -3,7 +3,7 @@
 ##  Script:     06_nypd_data-prep.R
 ##  Author:     Cedric Bhihe
 ##  Delivery:   January 2019
-## Last edit:   
+## Last edit:   November 2018
 # #############################
 
 rm(list=ls(all=TRUE))
@@ -14,8 +14,10 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
+
+## colors defined in '01_nyc311_input-parameters.R'
+# ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
+#           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 
 datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
 
@@ -300,13 +302,12 @@ offConcepts <- as.data.frame(cbind(c1,c2,c3))
 names(offConcepts) <- as.character(offCat_lst)
 # offConcepts <- offConcepts[,order(names(offConcepts))] # order offConcepts columns according to colnames
 
-## Save processed raw csv file as `nypd_offense_modalities.csv``
+## Save processed raw csv file as `nypd_offense_modalities.csv`
 target_file <- paste0("Data/",
                           yearNbr,
                           ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),
                           "00_nyc_crime-modalities.csv")
-csvSaveF(missings,target_file)     # csv to disk
-
+csvSaveF(offConcepts,target_file)     # csv to disk
 
 
 # #############################
@@ -326,6 +327,7 @@ y0 <- (shp[[index]]$box[2]+shp[[index]]$box[4])/2  # center point's ordinate
 
 par(mfrow=c(1,1))
 plot(shp[[index]]$x[1:276], shp[[index]]$y[1:276],type="l",col="blue",xlab="x",ylab="y")
+#plot(shp[[index]]$x, shp[[index]]$y,type="l",col="blue",xlab="x",ylab="y")   # FAULTY !!!
 points(x0,y0,type="p",cex=1,col="green")
 lines(c(shp[[index]]$box[1],shp[[index]]$box[1],shp[[index]]$box[3],shp[[index]]$box[3],shp[[index]]$box[1]),
       c(shp[[index]]$box[2],shp[[index]]$box[4],shp[[index]]$box[4],shp[[index]]$box[2],shp[[index]]$box[2]),
@@ -344,12 +346,21 @@ Nzip <- dim(mapZIP)[1]
 queryZIP <- as.character(mapZIP@data$ZIPCODE)         # list of geolocated ZIPs
 foundZIP <- c()
 
+idx_flag <- 0
 for (rr in 1:Nrec) {
-  x0 <- protoY$planeX[rr] ; y0 <- protoY$planeY[rr]   # NYPD coords of crime
+  x0 <- as.numeric(gsub(",","",as.character(protoY$planeX[rr])))
+  y0 <- as.numeric(gsub(",","",as.character(protoY$planeY[rr])))   # NYPD coords of crime
   ZIPindex <- whichBoxF(x0,y0,shp)                    # find `queryZIP`'s index for ZIP containing (x0,y0)
-  cat("NA for obs' index:\n")
-  nn <- 0
-  if (is.na(ZIPindex))  n <- n+1; cat(nn,") ",rr,"\n")
+ 
+  if (is.na(ZIPindex))  {
+      idx_flag <- idx_flag + 1
+      if (idx_flag == 1) {
+          cat("No ZIP found for obs' index:\n",rr,", ")
+      } else {
+          cat(rr,", ")
+      }
+  }
+  
   # accumulate ZIPs and normalize ZIP length to 5 characters
   foundZIP <- c(foundZIP, 
                 ifelse(is.na(ZIPindex),
@@ -361,6 +372,7 @@ for (rr in 1:Nrec) {
                        )
                 )
 }
+
 
 # #############################
 ## Consolidate protoY + save to disk
@@ -391,11 +403,19 @@ colnames(twoWayTable) <- as.character(levels(protoY$offCat))
 # # Check that there is independence between row and colum modalities
 chisq.test(twoWayTable)
 
+# # Conclusion: (for April 2010 NYPD crime data)
+# #   chi-sq=1.70, for DF=2 and  p-value 0.4255, is 
+# #   within the [0.05, 7.4] interval from (chi-sq tables) for two-sided
+# #   distributions at 5% overall risk. 
+# #   We ACCEPT the null hypothesis at the rist 5% of erring. 
+# #   There is NO association of row and column variables.
+# #   We are introducing some bias by suppressing missings.
+
 # # Conclusion: (for April 2014 NYPD crime data)
 # #   chi-sq=86.671, for DF=2 and highly significant p-value <2.2 e-16, is 
 # #   outside the [0.05, 7.4] interval from (chi-sq tables) for two-sided
 # #   distributions at 5% overall risk. 
-# #   We can reject the null hypothesis at the rist 5% of erring. 
+# #   We REJECT the null hypothesis at the rist 5% of erring. 
 # #   There is significant association of row and column variables.
 # #   We are introducing some bias by suppressing missings.
 # 
@@ -403,6 +423,6 @@ chisq.test(twoWayTable)
 # #   chi-sq=96.292, for DF=2 and highly significant p-value <2.2 e-16, is 
 # #   outside the [0.05, 7.4] interval from (chi-sq tables) for two-sided
 # #   distributions at 5% overall risk. 
-# #   We can reject the null hypothesis at the rist 5% of erring. 
+# #   We REJECT the null hypothesis at the rist 5% of erring. 
 # #   There is significant association of row and column variables.
 # #   We are introducing some bias by suppressing missings.

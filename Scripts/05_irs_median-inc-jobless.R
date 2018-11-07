@@ -14,9 +14,10 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 
+## colors defined in '01_nyc311_input-parameters.R'
+# ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
+#           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 
 # #############################
 ## Libraries
@@ -42,6 +43,10 @@ csvSaveF <- function(dataObj,targetfile) {
                 row.names=F,
                 col.names=T)
 }    # save cvs to file
+
+exit <- function() {
+    .Internal(.invokeRestart(list(NULL, NULL), NULL))
+}    # exit function. Use with caution: not standard, depends on OS's internals
 
 
 # #############################
@@ -70,6 +75,7 @@ source_file1 <- paste0(yearNbr,
                        ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
                        "00_nyc311_proc")
 
+
 protoX <- read.csv(paste0("Data/",
                           source_file1,
                           "03.csv"),
@@ -90,17 +96,21 @@ cat("\nUnique ZIP codes in data set:",length(ZIP),"\n\n")
 
 protoY <- read.csv(paste0("Data/",
                           yearNbr,
-                          "_zip-income_10-14_raw.csv"),
+                          "_irs-tax-return_zip10-14_raw.csv"),
                    header= TRUE,
                    dec = ".",
                    sep="\t", 
                    check.names=TRUE)
 
+rawZIP <- as.numeric(as.character(protoY$ZIP))   # factor coerced to vector
+#protoY <- protoY[which(rawZIP !=0),]
+protoY <- protoY[which(rawZIP %in% ZIP),]
+
 ## Build csv file w/ columns: ZIP, bin_lower_bound1,bin_lower_bound2, ...
-names(protoY) <- c("ZIP","AGI_bins","Returns")   # AGI = "Adjusted Gross Income"
-protoY <- protoY[!is.na(protoY$ZIP),]
-protoY[as.character(protoY[,3]) =="**" , 3] <- 0
-protoY$Returns <- gsub(",","",protoY$Returns)
+names(protoY) <- c("ZIP","AGI_bins","Returns","Jobless")   # AGI = "Adjusted Gross Income"
+protoY <- protoY[!(is.na(protoY$ZIP) | protoY$ZIP == ""),]  # keep only non NAs and empty "Returns" fields
+protoY[as.character(protoY[,3]) == "**" , 3] <- 0   # replace '**' with "0"
+protoY$Returns <- gsub(",","",protoY$Returns)  #  suppress all thousand comma delimiters
 
 incDist <- as.data.frame(matrix(0,nrow=length(unique(protoY$ZIP)),
                                 ncol=10,
@@ -119,8 +129,7 @@ names(incDist) <- c(df_header,  # col 1:6
                     paste0(as.character(binsVec[length(binsVec)]),"_"), # col7
                     "nbrReturns",       # col 8
                     "medianInc",    # col 9, 
-                    "jl_benef"
-                    )
+                    "jl_benef")
 
 # # Prepare the abcissae for the fitted model
 # obs_x <- c()
@@ -129,83 +138,59 @@ names(incDist) <- c(df_header,  # col 1:6
 
 cnt1 <- 1                  # protoY counter
 cnt2 <- 1                  # incDist counter
-while (!is.na(protoY$ZIP[cnt1])) {
-  if (as.character(protoY[cnt1,2]) %in% c("Total","")) {
-    incDist[cnt2,1] <- as.character(ifelse(nchar(as.character(protoY[cnt1,1])) < 5,
-                                           paste0(formatC(protoY[cnt1,1],width=5,flag="0")),
-                                           as.character(protoY[cnt1,1])
-                                           )
-                                    )
-    incDist[cnt2,2] <- as.character(protoY[cnt1+1,3])
-    incDist[cnt2,3] <- as.character(protoY[cnt1+2,3])
-    incDist[cnt2,4] <- as.character(protoY[cnt1+3,3])
-    incDist[cnt2,5] <- as.character(protoY[cnt1+4,3])
-    incDist[cnt2,6] <- as.character(protoY[cnt1+5,3])
-    incDist[cnt2,7] <- as.character(protoY[cnt1+6,3])
-    incDist[cnt2,8] <- as.character(protoY[cnt1,3])
+
+while ( ! is.na(protoY$ZIP[cnt1]) ) {
     
-    # compute median income 
-    pop50p100 <- round(as.numeric(incDist$nbrReturns[cnt2])/2,0)
-    for (ii in 2:7) {
-      cumulPop <- sum(as.numeric(incDist[cnt2,2:ii]))
-      if (pop50p100 <= cumulPop)   break 
+    if (protoY$AGI_bins[cnt1] == "") {
+        incDist[cnt2,1] <- protoY$ZIP[cnt1]
+        incDist[cnt2,2] <- protoY$Returns[cnt1+1]
+        incDist[cnt2,3] <- protoY$Returns[cnt1+2]
+        incDist[cnt2,4] <- protoY$Returns[cnt1+3]
+        incDist[cnt2,5] <- protoY$Returns[cnt1+4]
+        incDist[cnt2,6] <- protoY$Returns[cnt1+5]
+        incDist[cnt2,7] <- protoY$Returns[cnt1+6]
+        incDist[cnt2,8] <- protoY$Returns[cnt1]
+        incDist[cnt2,10] <- protoY$Jobless[cnt1]
+        
+        # Compute median income
+        pop50p100 <- round(as.numeric(incDist$nbrReturns[cnt2])/2,0)
+        for (ii in 2:7) {
+            cumulPop <- sum(as.numeric(incDist[cnt2,2:ii]))
+            if (pop50p100 <= cumulPop)   break 
+        }
+        if (ii == 7) {
+            incDist[cnt2,9] <- NA   
+            # wealthy zip neighborhood
+            # median cannot be evaluated for lack of reliable AGI upper bound
+        } else {
+            ## by rule of proportion
+            lowerPopBound <- ifelse(ii == 2,0,sum(as.numeric(incDist[cnt2,2:(ii-1)])))
+            incDist[cnt2,9] <- as.character( round(binsVec[ii-1]+
+                                                       (pop50p100-lowerPopBound)/(cumulPop-lowerPopBound)*
+                                                       (binsVec[ii]-binsVec[ii-1])),0)
+            
+            # ## by distribution fitting
+            # # prepare ordinates, obs_y
+            # obs_y <- as.numeric(incDist[cnt2,2:(length(svm_x)+1)])
+            # plot(svm_x,obs_y,type="b")
+            # model <- svm (svm_x,obs_y,epsilon=0.1,gamma=145)  # default cost C=1
+            # lines(svm_x,predict(model,svm_x),col="cyan")
+        }
+        cnt2 <- cnt2+1
     }
-    
-    if (ii == 7) {
-      incDist[cnt2,9] <- NA   # wealthy zip neighborhood; median cannot be evaluated for lack of 
-                              # reliable AGI upper bound
-    } else {
-      ## by rule of proportion
-      lowerPopBound <- ifelse(ii == 2,0,sum(as.numeric(incDist[cnt2,2:(ii-1)])))
-      incDist[cnt2,9] <- as.character( round(binsVec[ii-1]+
-                                               (pop50p100-lowerPopBound)/(cumulPop-lowerPopBound)*
-                                               (binsVec[ii]-binsVec[ii-1])),0)
-      
-      # ## by distribution fitting
-      # # prepare ordinates, obs_y
-      # obs_y <- as.numeric(incDist[cnt2,2:(length(svm_x)+1)])
-      # plot(svm_x,obs_y,type="b")
-      # model <- svm (svm_x,obs_y,epsilon=0.1,gamma=145)  # default cost C=1
-      # lines(svm_x,predict(model,svm_x),col="cyan")
-    }
-    
-    # ## Gini coefficient
-    # incDist[cnt2,11] <- NA  # not implemented for lack of reliable AGI upper bound
-    
-    cnt2 <- cnt2+1
-  }
-  cnt1 <- cnt1+1
+    cnt1 <- cnt1+1
 }
 
-#rm(protoY)
-
-
-# ###############################
-## Enrich data with nbr of tax returns showing unemployment benefits
-# ###############################
-
-source_file_2 <- paste0("Data/",
-                      yearNbr,
-                      "_zip-irs-exempt-unemp.csv")
-protoZ <- read.csv(source_file_2,
-              header = TRUE, 
-              dec = ".",
-              sep="\t", 
-              check.names=TRUE)
-
-protoZ <- protoZ[ protoZ$STATE == "NY" & protoZ$ZIP != 99999 , c(2,6)]
-names(protoZ) <- c("ZIP","jl_benef")
-for (zz in incDist$ZIP ){
-  incDist$jl_benef[which(incDist$ZIP == zz)] <- protoZ$jl_benef[protoZ$ZIP == as.numeric(zz)]
-}
- 
 # #############################
 ## Save to disk
 # #############################
 
-target_file <- sub("311_proc.*","_irs-by-zip.csv",source_file1)
+target_file <- paste0("Data/",sub("311_proc","_irs-by-zip.csv",source_file1))
 csvSaveF(incDist,target_file)
 
+# #############################
+# End
+# #############################
 
 
 

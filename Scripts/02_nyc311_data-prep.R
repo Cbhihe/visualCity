@@ -14,10 +14,14 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 set.seed(932178)
-ccolors=c("blue","red","green","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
+# colors defined in '01_nyc311_input-parameters.R'
 
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
+
+# #############################
+## Source parameter file
+# #############################
+source(file="Scripts/01_nyc311_input-parameters.R",
+       local=F,echo=F)  # Year, Month, Day, ...
 
 
 # ############################################
@@ -27,7 +31,6 @@ datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S");
 setRepositories(ind = c(1:6,8))
 #setRepositories()   # to specify repo on the fly:
 #chooseCRANmirror()  # in case package(s) cannot be downloaded from default repo
-
 #library(xlsx, lib.loc="~/R/x86_64-pc-linux-gnu-library/3.5")
 
 
@@ -46,16 +49,15 @@ csvSaveF <- function(dataObj,targetfile) {
               col.names=T)
 }    # save cvs to file
 
+exit <- function() {
+    .Internal(.invokeRestart(list(NULL, NULL), NULL))
+}    # exit function. Use with caution: not standard, depends on OS's internals
+
 addMonthF <- function(date,n) {
   seq(date,by=paste(n,"months"), length = 2)[2]
 }      # time calculations
 
 
-# #############################
-## Source parameter file
-# #############################
-source(file="Scripts/01_nyc311_input-parameters.R",
-       local=F,echo=F)  # Year, Month, Day, ...
 
 periodStart <- as.Date(paste0(yearNbr,"-",
                               ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
@@ -116,7 +118,7 @@ csvSaveF(protoY,target_file)         # commit csv to disk
 # #############################
 ## Clean-up 2: Complaints
 # #############################
-class(protoY$Complaint)         # returns "factor"
+#class(protoY$Complaint)         # returns "factor"
 # extract "Complaint" and "Descriptor" to speed up string replacement
 Ycplt_full <- as.data.frame(protoY[,c("Complaint","Descriptor")])
 # make it matrix/ with column vectors/lists for easier handling
@@ -128,7 +130,7 @@ cat("\n\nService request modalities:",length(complaint_lst),"\n\n")   # unique c
 
 ## How to manipulate
 cto <- table(protoY$Complaint)           # cto = "Complaint Type Occurences", as 'factors'
-# cto[names(cto)=="Water System"]        # match complaint to specific type
+#cto[names(cto)=="Water System"]        # match complaint to specific type
 # names(cto[cto <= 5])                   # list complaint types which occur 5 or fewer times
 # which(names(cto)=="Water System")      # extract list index of complaint type
 # cto[names(cto)=="Water System"]        # extract nbr of occurences with 'name'
@@ -136,14 +138,17 @@ cto <- table(protoY$Complaint)           # cto = "Complaint Type Occurences", as
 # cto[names(cto)=="Water System"][[1]]   # extract nbr of occurences for specific complaint
 sink_file <- paste0("Report/",proc_file,"01_modalities.csv")
 sink(file=sink_file,append=F,split=F)
-cat("Service Requests\' NYC 311 Calls\' unprocessed",
-    length(complaint_lst),
-    "modalities.\n")
+cat("Service Requests' NYC 311 Calls' unprocessed",length(complaint_lst),"modalities.\n")
 cat("Period:",as.character(periodStart),"-",as.character(periodEnd),"\n\n")
 raw_mod <- as.matrix(cbind(row.names(cto[order(cto, decreasing = T)]),cto[order(cto, decreasing = T)]))
 cat("Modality","Obs_count","\n",sep=",") 
 apply(raw_mod,1,function(x) cat(x[1],x[2],"\n",sep=","))  # list complaint types in decreasing order of frequency
 sink()
+
+## Check that filtering rules are compatible with those of reference year 2014
+cto2014 <- read.csv("Report/20140400_nyc311_proc01_modalities.csv", header = T, sep=",",skip=3)[,1:2]
+cto2014 <- cto2014[2:(nrow(cto2014)-1),1]  # list of complaint modalities for 2014
+labels(cto[which(! unlist(labels(cto)) %in% unlist(cto2014) ) ]) # visualize differences
 
 ## Manipulate with df
 # cto.df <- as.data.frame(cto)
@@ -166,42 +171,60 @@ for (dd in 1:nDiv) {
   uBound=uBound_lst[[dd]]
   cat(" * data interval",dd,":",lBound,"-",uBound,"\n")
   # Replace "positive complaints" with "Kudos"
-  Ycplt_p <- lapply( Ycplt[lBound:uBound],function(x) sub("ADOPT-A-BASKET|TAXI COMPLIM.*",
-                                                      "IAO",x,ignore.case=T,perl=T) )  # originally categorized as "Kudos"
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("GENERAL.*|RANGEHOOD|^(.* )*HEAT.*|PAINT.*|FLOORING.*|WATER LEAK|.*PLUMBING.*|BOILER.*|ASBESTOS|INDOOR.*|ELEVATOR.*|FIRE ALARM.*|ELECTRIC.*|DOOR.*|OUTSIDE BUILDING|APPLIANCE|BUILDING CONDITION|BUILDING\\/USE|MOLD|WINDOW GUARD|AIR QUALITY",
-                                        "HousCond",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("UNSANITARY.*|SANITATION.*|.*SMELL.*|.*GRAFFITI.*|.*DIRTY.*|.*RECYCLING.*|MISSED COLLECTION.*|STANDING WATER|DRINKING WATER|WATER QUALITY|PUBLIC TOILE.*|.*LITTER.*|PLANT|VACANT LOT|SWEEPING.*|FOOD ESTABLISHMENT",
-                                        "Sani",x,ignore.case=T,perl=T) ) # Sanitation
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("RODENT.*",
-                                             "Sani",x,ignore.case=T,perl=T) )   # Originally categorized as "Rodent"
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^HAZARDOUS MATER.*|.*SNAD.*|HAZMAT.*|POISON IVY|ILLEGAL ANIMAL.*|^(.* )+TREE.*|GAS STATION DISCHARGE LINES|INDUSTRIAL WASTE|LEAD|WATER CONSERVATION|RADIOACTIVE.*|ANIMAL ABUSE|X-RAY.*|DPR INTERNAL|ANIMAL IN A PARK",
-                                        "EnvProt",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^SEWER.*|^WATER SYSTEM",
-                                        "WaterSyst",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^NOISE - COMM.*",
-                                        "NoiseBiz",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^NOISE - RESID.*|^NOISE - PARK.*|^NOISE - HOUSE OF WORSHIP",
-                                        "NoiseResid",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^NOISE - VEH.*|^NOISE - STREET.*|COLLECTION TRUCK NOISE|NOISE.*HELICOPTER",
-                                        "NoiseTraf",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^NOISE - CONSTRUCT.*",
-                                        "NoiseConst",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^NOISE$",
-                                        "NoiseXX",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^BLOCKED DRI.*|^ILLEGAL PARK.*|DERELICT VEH.*|DERELICT BIC.*|TRAFFIC",
-                                        "Traffic",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("^CONSUMER.*|^TAXI.*|^FOOD.*|BEACH/POOL\\/SAUNA.*|LEGAL SERVICE.* PROVIDER.*|TRANSPORTATION PROVIDER.*|CALORIE LABELING|FALSE ADVERT.*|TRANS FAT.*|BOTTLED WATER|FOR HIRE VEHICLE.*",
-                                        "ConsumProt",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("HOME DELIVERED MEAL.*|HOUSING OPTIONS|BENEFIT CARD REPLACEMENT|ALZHEIMER'S CARE|HOMELESS.*|SENIOR CENTER.*|HOME CARE PROVIDER.*|BEREAVEMENT SUPPORT.*|DHS.*|.*MEALS HOME.*|HOUSING - LOW.*|SCRIE|ELDER.*|HEAP ASSISTANCE",
-                                        "SocServ",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("HARBORING BEES.*|SCAFFOLD.*|BEST\\/SITE.*|OPEN FLAME.*|ILLEGAL FIRE.*|LIFEGUARD|FIRE SAFETY DIRECTOR.*|.*SPIT.*|SAFETY|SNOW|.*SPRINKLER.*",
-                                        "IAO",x,ignore.case=T,perl=T) )  # originally categorized in "Safety"
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("STREET COND.*|STALLED SITES|MAINTENANCE OR FACILITY|EMERGENCY RESPONSE.*|.*SIDEWALK COND.*|BRIDGE COND.*|BUS STOP.*|HIGHWAY.*|BIKE RACK.*|STREET LIGHT.*|^BROKEN MUNI.*|BROKEN PARKING.*|CURB.*|STREET SIGN.*|MUNICIPAL PARKING FACILITY|TRAFFIC SIGNAL.*|PUBLIC PAYPHONE.*|SCHOOL MAINTENANCE|NON-RESIDENTIAL HEAT|TUNNEL COND.*",
-                                        "UrbInf",x,ignore.case=T,perl=T) )
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("PUBLIC ASSEMBLY.*|SQUEEGEE|CASE MANAGEMENT.*|INVESTIGATIONS AND DISCIPLINE.*|TANNING|.*CONSTRUCTION.*|DOF LITERATURE REQUEST|INVESTIGATIONS AND DISCIPLINE.*|DOF PROPERTY.*|PANHANDLING|VENDING|F?ATF|DISORDERLY.*|DRINKING.*|SMOKING.*|VIOLATION.*|URINATING.*|ANIMAL FACILITY - NO.*|.*PLACARD.*|UNLEASHED.*|NON-EMERGENCY POLICE.*|BIKE\\/ROLLER\\/SKATE CHRONIC|CRANES AND DERRICKS|TATTOOING|POSTING ADVERT.*",
-                                        "IAO",x,ignore.case=T,perl=T) )  # Inspect, Audit and Order
-  Ycplt_p <- lapply( Ycplt_p,function(x) sub("DCA \\/ DOH NEW LICENSE.*|OTHER ENFORCE.*|FERRY.*|DOF PARKING -.*|SRDE|PARKING CARD|FOUND PROPERTY|MISCELLA.*",
-                                        "IAO",x,ignore.case=T,perl=T) )   # originally categorized in "Misc"
+  Ycplt_p <- lapply( Ycplt[lBound:uBound],
+                     function(x) sub("ADOPT-A-BASKET|TAXI COMPLIM.*",
+                                     "IAO",x,ignore.case=T,perl=T) )  # originally categorized as "Kudos"
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("DAY CARE|^HOME REPAIR|^NONCONST$|^HPD.*|^GENERAL.*|^RANGEHOOD$|^(.* )*HEAT.*|PAINT.*|FLOORING.*|WATER LEAK|.*PLUMBING.*|BOILER.*|ASBESTOS|INDOOR.*|ELEVATOR.*|FIRE ALARM.*|ELECTRIC.*|DOOR.*|OUTSIDE BUILDING|APPLIANCE|BUILDING CONDITION|BUILDING\\/USE|MOLD|WINDOW GUARD|AIR QUALITY",
+                                     "HousCond",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("MOSQUITOES|^COOLING TOWER|^PORTABLE TOILET$|UNSANITARY.*|SANITATION.*|.*SMELL.*|.*GRAFFITI.*|.*DIRTY.*|.*RECYCLING.*|MISSED COLLECTION.*|STANDING WATER|DRINKING WATER|WATER QUALITY|PUBLIC TOILE.*|.*LITTER.*|PLANT|VACANT LOT|SWEEPING.*|FOOD ESTABLISHMENT",
+                                     "Sani",x,ignore.case=T,perl=T) ) # Sanitation
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("RODENT.*|.*ITEM COLLECTION",
+                                     "Sani",x,ignore.case=T,perl=T) )   # Originally categorized as "Rodent"
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^(.* )+(SNAD)|ELECTRONICS WASTE|^WEATHERIZ.*|^HAZARDOUS MATER.*|.*SNAD.*|HAZMAT.*|POISON IVY|ILLEGAL ANIMAL.*|^(.* )+TREE.*|GAS STATION DISCHARGE LINES|INDUSTRIAL WASTE|^LEAD$|WATER CONSERVATION|RADIOACTIVE.*|ANIMAL ABUSE|X-RAY.*|DPR INTERNAL|ANIMAL IN A PARK",
+                                     "EnvProt",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^SEWER.*|^WATER SYSTEM|^WATER MAINTENANCE",
+                                     "WaterSyst",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^NOISE - COMM.*",
+                                     "NoiseBiz",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^NOISE - RESID.*|^NOISE - STREET.*|^NOISE - PARK.*|^NOISE - HOUSE OF WORSHIP",
+                                     "NoiseResid",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^NOISE - VEH.*|COLLECTION TRUCK NOISE|NOISE.*HELICOPTER",
+                                     "NoiseTraf",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^NOISE - CONSTRUCT.*",
+                                     "NoiseConst",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^NOISE$",
+                                     "NoiseXX",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^BLOCKED DRI.*|.*ILLEGAL PARK.*|DERELICT VEH.*|DERELICT BIC.*|TRAFFIC",
+                                     "Traffic",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("SNW|^ADVOCATE.*|^BOTTLED WATER|^CONSUMER.*|^TAXI.*|^FOOD.*|BEACH/POOL\\/SAUNA.*|LEGAL SERVICE.* PROVIDER.*|TRANSPORTATION PROVIDER.*|CALORIE LABELING|FALSE ADVERT.*|TRANS FAT.*|BOTTLED WATER|FOR HIRE VEHICLE.*",
+                                     "ConsumProt",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^UTILITY PROG.*|^PARENT LEADER.*|^EVICTION|HOME DELIVERED MEAL.*|HOUSING OPTIONS|BENEFIT CARD REPLACEMENT|ALZHEIMER'S CARE|HOMELESS.*|SENIOR CENTER.*|HOME CARE PROVIDER.*|BEREAVEMENT SUPPORT.*|DHS.*|.*MEALS HOME.*|HOUSING - LOW.*|SCRIE|ELDER.*|HEAP ASSISTANCE",
+                                     "SocServ",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("^TAXPAYER ADVOCA.*|SUMMER CAMP|REGISTRATION.*|OEM.*|HARBORING BEES.*|SCAFFOLD.*|BEST\\/SITE.*|OPEN FLAME.*|ILLEGAL FIRE.*|LIFEGUARD|FIRE SAFETY DIRECTOR.*|.*SPIT.*|SAFETY|SNOW|.*SPRINKLER.*",
+                                     "IAO",x,ignore.case=T,perl=T) )  # originally categorized in "Safety"
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("LINKNYC|STREET COND.*|STALLED SITES|MAINTENANCE OR FACILITY|EMERGENCY RESPONSE.*|.*SIDEWALK COND.*|BRIDGE COND.*|BUS STOP.*|HIGHWAY.*|BIKE RACK.*|STREET LIGHT.*|^BROKEN MUNI.*|BROKEN PARKING.*|CURB.*|STREET SIGN.*|MUNICIPAL PARKING FACILITY|TRAFFIC SIGNAL.*|PUBLIC PAYPHONE.*|SCHOOL MAINTENANCE|NON-RESIDENTIAL HEAT|TUNNEL COND.*",
+                                     "UrbInf",x,ignore.case=T,perl=T) )
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("PUBLIC ASSEMBLY.*|SQUEEGEE|CASE MANAGEMENT.*|INVESTIGATIONS AND DISCIPLINE.*|TANNING|.*CONSTRUCTION.*|DOF LITERATURE REQUEST|INVESTIGATIONS AND DISCIPLINE.*|DOF PROPERTY.*|PANHANDLING|VENDING|F?ATF|DISORDERLY.*|DRINKING.*|SMOKING.*|VIOLATION.*|URINATING.*|ANIMAL FACILITY - NO.*|.*PLACARD.*|UNLEASHED.*|NON-EMERGENCY POLICE.*|BIKE\\/ROLLER\\/SKATE CHRONIC|CRANES AND DERRICKS|TATTOOING|POSTING ADVERT.*",
+                                     "IAO",x,ignore.case=T,perl=T) )  # Inspect, Audit and Order
+  Ycplt_p <- lapply( Ycplt_p,
+                     function(x) sub("(.* )*QUESTION.*|PET SHOP|MISCELLANEOUS CAT.*|FORMS|FATF|DRUG ACTIVITY|DRIE|COMMENTS|^DISCIPLINE AND SUSPENS.*|^TEACHING\\/LEARNING.*|DCA \\/ DOH NEW LICENSE.*|OTHER ENFORCE.*|FERRY.*|DOF PARKING -.*|SRDE|PARKING CARD|FOUND PROPERTY|MISCELLA.*",
+                                     "IAO",x,ignore.case=T,perl=T) )   # originally categorized in "Misc"
   
   Ycplt_acc <- c(Ycplt_acc,Ycplt_p)
   }
@@ -213,7 +236,8 @@ Y <- cbind(protoY[,c(1,2)],Complaint=unlist(Ycplt_acc,use.name=F),protoY[,c(5:13
 Y_wk <- as.matrix(Y)
 # Additional dimensional reduction based on Y$Complaint and Y$Descriptor
 # List unique combinations of type of complaint and corresponding `Y$Descriptor` values
-unique(Ycplt_full[Y$Complaint=="NoiseXX",2])  # for NOISE
+# -----------for NOISE
+unique(Ycplt_full[Y$Complaint=="NoiseXX",2]) 
 
 list_1 <- which(Y$Complaint=="NoiseXX")  # row indices where NOISE occurs in Y$Complaint
 
@@ -221,7 +245,7 @@ list_2 <- grep("CONSTRUC|JACK HAMMER",toupper(Ycplt_full$Descriptor))  # row ind
 Y_wk[as.vector(intersect(list_1,list_2)),3] <- "NoiseConst"
 cat(length(intersect(list_1,list_2)),"changes.\n")
 
-list_2 <- grep("MANUFACTURING|ALARM|ICE CREAM TRUCK",toupper(Ycplt_full$Descriptor))
+list_2 <- grep("MANUFACTURING|ALARM|ICE CREAM TRUCK|PRIVATE CARTING",toupper(Ycplt_full$Descriptor))
 Y_wk[as.vector(intersect(list_1,list_2)),3] <- "NoiseBiz"
 cat(length(intersect(list_1,list_2)),"changes.\n")
 
@@ -229,10 +253,22 @@ list_2 <- grep("BARKING|MOOING|LAUGHING|TRUMPETING|BRAYING|SHOUT|SCREAM|LAWN CAR
 Y_wk[as.vector(intersect(list_1,list_2)),3] <- "NoiseResid"
 cat(length(intersect(list_1,list_2)),"changes.\n")
 
-list_2 <- grep("BOAT|OTHER NOISE",toupper(Ycplt_full$Descriptor))
+list_2 <- grep("BOAT|OTHER NOISE|HORN HONKING|OTHER NOISE SOURCE|VEHICLE",toupper(Ycplt_full$Descriptor))
 Y_wk[as.vector(intersect(list_1,list_2)),3] <- "NoiseTraf"
 cat(length(intersect(list_1,list_2)),"changes.\n")
 
+# -----------for HEALTH
+unique(Ycplt_full[Y$Complaint=="Health",2]) 
+list_1 <- which(Y$Complaint=="Health")  # row indices where NOISE occurs in Y$Complaint
+list_2 <- grep("UNHEALTHY CONDITION",toupper(Ycplt_full$Descriptor))  # row indices where CONSTRUC occurs in Y$Descriptor
+Y_wk[as.vector(intersect(list_1,list_2)),3] <- "Sani"
+cat(length(intersect(list_1,list_2)),"changes.\n")
+
+list_2 <- grep("ACCESSING MEDICAL CARE",toupper(Ycplt_full$Descriptor))  # row indices where CONSTRUC occurs in Y$Descriptor
+Y_wk[as.vector(intersect(list_1,list_2)),3] <- "SocServ"
+cat(length(intersect(list_1,list_2)),"changes.\n")
+
+table(Y_wk[,3])
 # Y$Complaint <- vapply(Y$Complaint,paste,collapse=", ",character(1L))  # flatten list - attempt 1
 # x <- vapply(Y$Complaint, length, 1L)                                  # flatten list - attempt 2
 # Y<- Y[rep(rownames(Y), x), ]
@@ -242,3 +278,4 @@ target_file <- paste0("Data/",proc_file,"02.csv")
 csvSaveF(Y_wk,target_file)                                          # csv to disk
 
 rm(Ycplt_full,Ycplt_acc,Ycplt_p,protoY,protoY_raw)                      # cleanup
+

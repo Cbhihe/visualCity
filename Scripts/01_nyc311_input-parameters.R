@@ -7,15 +7,26 @@
 # #############################
 
 
+ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
+          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
+
+
 # #############################
 ## Google Maps specific API flag        (set 'geolocalF'  to TRUE to use)
 # #############################
-# geolocalF=TRUE   # Use Google Maps API
-geolocalF=FALSE  # Do not use Google Maps API
+# Define 'geolocalF' parameter in Google's geocode API calling script
+
+if (! exists("geolocalF", mode="logical") ) geolocalF=FALSE   # default to FALSE when not defined
+
 if (geolocalF) {
-    source("/home/ckb/.apikeys/googlemaps.apikey")
-    max_query <- 2500               # API's limit for nbr of free https queries/day = 2500
+    home <- Sys.getenv("HOME")
+    source(paste0(home,"/.apikeys/google-geocode.apikey"))
+    # max_query <- 2500 # API's limit for nbr of free https queries/day = 2500
+                        # Does not apply anymore
+    APIsleep <- 0.02 # maximum query rate accepted by Google Maps is 50 queries/s/user or 1 query/0.02s/user
 }
+
+
 
 # #############################
 ## Input parameters
@@ -23,7 +34,7 @@ if (geolocalF) {
 
 ## Analysis period
 #timeWindow <-"monthly"         # sliding time window not implemented yet
-yearNbr <- 2014
+yearNbr <- 2010
 monthNbr <- 4
 dayNbr <- 1
 

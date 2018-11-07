@@ -14,10 +14,6 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
 
 
 # #############################
@@ -108,7 +104,7 @@ sum(apportRule_lst)  # chk_09.02
 neighborZIP <- c() ; neighborZIPborough <- c() ; apportRule <- c()
 for (zipcode in neighbor_lst) {
     if (zipcode %in% boroughZIP$ZIP) {
-        neighborZIP <- c(neighborZIP,nn)
+        neighborZIP <- c(neighborZIP,zipcode)
         neighborZIPborough <- c(neighborZIPborough,boroughZIP[boroughZIP$ZIP == zipcode,2])
         apportRule <- c(apportRule,apportRule_lst[which(neighbor_lst == zipcode)])
     }
@@ -153,39 +149,42 @@ protoYneigh_idxSorted <- which(protoY$ZIP %in% neighborZIP)[order(apportRule,dec
 
 
 # apportion
-protoYghostZIP_idx <- which(protoY$ZIP == ghostZIP)  # source ghost ZIP code index
+protoYghostZIP_idx <- c()
+protoYghostZIP_idx <- which(protoY$ZIP %in% c(as.character(ghostZIP),
+                                               as.character(sprintf("%05d",ghostZIP)))
+                            )  # source ghost ZIP codes' indices
 
-# aa <- 0 # chk_09.03
-for (zz_idx in protoYneigh_idxSorted) {
-    for (ii in 3:18) {
-        apportRate <- apportRuleSorted[which(protoYneigh_idxSorted == zz_idx)]
-        # if (ii==10) { aa <- aa + round(apportRate * protoY[protoYghostZIP_idx,10]) }  # chk_09.03
-        protoY[zz_idx,ii] <- protoY[zz_idx,ii] + round(apportRate * protoY[protoYghostZIP_idx,ii])
+if (length(protoYghostZIP_idx) != 0) {
+    # test presence of ghost ZIP code "00083" in data
+    for (ZIP_idx in protoYneigh_idxSorted) {
+        for (ii in 3:18) {
+            apportRate <- apportRuleSorted[which(protoYneigh_idxSorted == ZIP_idx)]
+            # if (ii==10) { aa <- aa + round(apportRate * protoY[protoYghostZIP_idx,10]) }  # chk_09.03
+            protoY[ZIP_idx,ii] <- protoY[ZIP_idx,ii] + round(apportRate * protoY[protoYghostZIP_idx,ii])
+        }
     }
+    protoY <- protoY[-protoYghostZIP_idx,]
+    
+    
+    # characterize missings
+    missingIRS <- protoY[is.na(protoY$medianInc),]
+    
+    # Compute and draw missings' table, for all obs with missing ZIP
+    missingZIP_aggr <- aggr(protoY, 
+                            numbers=TRUE,
+                            bars=TRUE,
+                            combined=FALSE,
+                            prop=FALSE,
+                            plot=TRUE,
+                            axes=TRUE,
+                            varheight=FALSE,
+                            labels=names(protoY),
+                            col=ccolors[6:8],
+                            cex.axis=1,
+                            ylab=c("Missing Data (count)","Missing Data Distribution") )
+    
+    summary(missingZIP_aggr)
 }
-protoY <- protoY[-protoYghostZIP_idx,]
-
-
-# characterize missings
-missingIRS <- protoY[is.na(protoY$medianInc),]
-
-# Compute and draw missings' table, for all obs with missing ZIP
-missingZIP_aggr <- aggr(protoY, 
-                        numbers=TRUE,
-                        bars=TRUE,
-                        combined=FALSE,
-                        prop=FALSE,
-                        plot=TRUE,
-                        axes=TRUE,
-                        varheight=FALSE,
-                        labels=names(protoY),
-                        col=ccolors[6:8],
-                        cex.axis=1,
-                        ylab=c("Missing Data (count)","Missing Data Distribution") )
-
-summary(missingZIP_aggr)
-
-
 
 # save to disk
 target_file <- paste0("Data/",

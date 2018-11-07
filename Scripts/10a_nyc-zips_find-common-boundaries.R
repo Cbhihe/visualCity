@@ -25,9 +25,16 @@ rm(list=ls(all=TRUE))
 
 setwd("~/Documents/Work/Academic-research/NYC311/")
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 set.seed(932178)
+
+
+# #############################
+## Load preliminary input parameters
+# #############################
+
+# Load Year, Month, Day, ...
+source(file="Scripts/01_nyc311_input-parameters.R",local=F,echo=F)  
+
 
 # #############################
 ## Libraries
@@ -53,14 +60,6 @@ csvSaveF <- function(dataObj,targetfile) {
                 row.names=F,
                 col.names=T)
 }    # save cvs to file
-
-
-# #############################
-## Load preliminary input parameters
-# #############################
-
-# Load Year, Month, Day, ...
-source(file="Scripts/00_nyc311_input-parameters.R",local=F,echo=F)  
 
 
 # #############################
@@ -102,7 +101,7 @@ Y <- read.csv(paste0("Data/",source_file),
 ZIP_lst <- as.character(Y$ZIP[Y$ZIP !="99999"])
 
 # #############################
-## Compute common boundaries between ghost ZIP "00083" and neighboring ZIPs
+## Compute common boundaries between ZIPs
 # #############################
 
 # Use zipped achive at https://data.cityofnewyork.us/Business/Zip-Code-Boundaries/i8iw-xf4u
@@ -228,28 +227,36 @@ for (ii in 1:(NZIP-1)) {   # iterate over rows
 ## save common borders proportions (%) between ZIPs to disk
 # #############################
 
-target_file="Data/nyc311_all-zip-common-borders.csv"
-# write.table(ComBor, file=target_file,
-#             row.names=T, col.names=T,
-#             sep=" ",
-#             dec=".",
-#             append=F)
-csvSaveF(ComBor,target_file)
+target_file <- paste0("Data/",
+                       yearNbr,
+                       ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
+                       "00_nyc_all-zip-common-borders.csv")
 
+csvSaveF(ComBor,target_file)
 
 
 # #############################
 ## check which neighboring ZIP boundaries coincide in more than apct (%)
 # #############################
 
-target_file="Data/nyc311_all-zip-common-borders.csv"
+target_file <- paste0("Data/",
+                      yearNbr,
+                      ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
+                      "00_nyc_all-zip-common-borders.csv")
+
 ComBor <- read.table(file=target_file,
                      header=T,
                      sep=",",
                      dec=".")
+
+
+NZIP=nrow(ComBor)
+ZIP_lst <- sub("^X","",names(ComBor))
+
 apct <- 75  # expressed in %
 
-for (ii in 1:(NZIP-1)) {   # iterate over rows, check upper triabgle, avoid diagonal
+for (ii in 1:(NZIP-1)) {  
+    # iterate over rows, check upper triabgle, avoid diagonal
     for (jj in (ii+1):NZIP) {   # iterate over columns,  check upper triabgle, avoid diagonal
         if ( (ComBor[ii,jj] >= apct) | (ComBor[jj,ii] >= apct) ) {
             if (ComBor[ii,jj] >= ComBor[jj,ii]) {
@@ -260,8 +267,20 @@ for (ii in 1:(NZIP-1)) {   # iterate over rows, check upper triabgle, avoid diag
         }
     }
 }
-# Results for NYC:
+
+
+# ######################
+## Results for NYC 
+# ######################
+
+## April 2010:
+#ZIP code 11101 (on row 110 ), to absorb ZIP code 11109 (on col 116 )
+#    ComBor[110,116] yields 84.17%
+
+## April 2014:
 # ZIP code 11101 (on row 103 ) is to absorb ZIP code 11109 (on col 109 ) 
 #    ComBor[103,109] yields 84.17%
 # ZIP code 11433 (on row 194 ) is to absorb ZIP code 11451 (on col 198 )
 #    ComBor[194,198] yields 100%
+
+## April 2018:

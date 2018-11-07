@@ -22,9 +22,17 @@ rm(list=ls(all=TRUE))
 setwd("~/Documents/Work/Academic-research/NYC311/")
 
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
 set.seed(932178)
+
+
+# #############################
+## Load preliminary input parameters
+# #############################
+
+# Load Year, Month, Day, ...
+source(file="Scripts/01_nyc311_input-parameters.R",
+       local=F,echo=F)  
+
 
 # #############################
 ## Libraries
@@ -52,15 +60,6 @@ csvSaveF <- function(dataObj,targetfile) {
 
 
 # #############################
-## Load preliminary input parameters
-# #############################
-
-# Load Year, Month, Day, ...
-source(file="Scripts/01_nyc311_input-parameters.R",
-       local=F,echo=F)  
-
-
-# #############################
 ## Load data file
 # #############################
 
@@ -79,9 +78,21 @@ Y <- read.csv(file=source_file,
 ## ZIP of interest
 # #############################
 
-ZIP_lst <- as.character(Y[Y$ZIP !="99999",1])
-NZIP <- length(ZIP_lst)
+bogusZIP <- c("99999")
+#ZIP_lst <- as.character(Y$ZIP[! Y$ZIP %in% bogusZIP])
+ZIP_lst <- as.character(Y$ZIP)
 
+# list of ZIP codes ('ZIP_lst') must conform to available ZIP mapping database
+mapZIP <- readOGR(dsn="./Data/Geolocation", layer="ZIP_CODE_040114")
+ZIP_idx <- which(ZIP_lst %in% unique(mapZIP$ZIPCODE))
+
+# list of ZIP codes in complete data set but not in ZIP mapping database
+supZIP <- Y$ZIP[-c(ZIP_idx)]
+(YsupZIP <- Y[which(Y$ZIP %in% supZIP),])
+
+#ZIP_lst <- as.character(Y$ZIP[! Y$ZIP %in% c(supZIP,bogusZIP)])
+ZIP_lst <- as.character(Y$ZIP[ZIP_idx])
+NZIP <- length(ZIP_lst)
 
 # #############################
 ## Check which neighboring ZIP boundaries coincide in more than apct (%)
@@ -90,8 +101,12 @@ NZIP <- length(ZIP_lst)
 
 apct <- 75  # expressed in %
 
-target_file="nyc311_all-zip-common-borders.csv"
-ComBor <- read.table(file=paste0("Data/",target_file),
+target_file=paste0("Data/",
+                   yearNbr,
+                   ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
+                   "00_nyc_all-zip-common-borders.csv")
+
+ComBor <- read.table(file=target_file,
                      header=T,
                      sep=",",
                      dec=".")
@@ -104,12 +119,12 @@ for (ii in 1:(NZIP-1)) {   # iterate over rows, check upper triangle, avoid diag
             Ytmp <- Y[as.character(Y[,1]) %in% c(ZIP_lst[ii],ZIP_lst[jj]), ]
             Ytmp[is.na(Ytmp)] <- 0
             if (ComBor[ii,jj] >= ComBor[jj,ii]) {
-                cat("ZIP code",ZIP_lst[ii],"to absorb ZIP code",ZIP_lst[jj],"\n")
+                cat("ZIP code",ZIP_lst[ii],"absorbed ZIP code",ZIP_lst[jj],"\n")
                 Y[as.character(Y[,1]) == ZIP_lst[ii] , c(3:18,20)] <- Ytmp[1 , c(3:18,20)] + Ytmp[2, c(3:18,20)]
                 Y <- Y[as.character(Y[,1]) != ZIP_lst[jj],]
                 # Note: medianInc is not apportionned for lack of reliable population density data
             } else {
-                cat("ZIP code",ZIP_lst[jj],"to absorb ZIP code",ZIP_lst[ii],"\n")
+                cat("ZIP code",ZIP_lst[jj]," absorbed ZIP code",ZIP_lst[ii],"\n")
                 Y[as.character(Y[,1]) == ZIP_lst[jj] , c(3:18,20)] <- Ytmp[1, c(3:18,20)] + Ytmp[2 , c(3:18,20)]
                 Y <- Y[as.character(Y[,1]) != ZIP_lst[ii],]
                 # Note: medianInc is not apportionned for lack of reliable population density data
@@ -117,7 +132,9 @@ for (ii in 1:(NZIP-1)) {   # iterate over rows, check upper triangle, avoid diag
         }
     }
 }
+
 rm(Ytmp,ii,jj)
+
 
 # Results for NYC's SRCs - period April 2014:
 # ZIP code 11101 is to absorb ZIP code 11109 

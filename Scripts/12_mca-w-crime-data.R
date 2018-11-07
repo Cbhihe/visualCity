@@ -9,20 +9,13 @@
 rm(list=ls(all=TRUE))
 
 # #############################
+## Source parameter file
+# #############################
 
 setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
-
-
-# #############################
-## Source parameter file
-# #############################
 
 source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...setwd("~/Documents/Work/Academic-research/NYC-complaints/")
@@ -56,6 +49,10 @@ csvSaveF <- function(dataObj,targetfile) {
               col.names=T)
 }    # save cvs to file
 
+exit <- function() {
+    .Internal(.invokeRestart(list(NULL, NULL), NULL))
+}    # script exit function. 
+                            # Caution: not standard, depends on OS's internals
 
 # #############################
 ## Load data
@@ -88,22 +85,82 @@ zeroSRCzip <- labels(fi[fi <= 5/cntTot]) # Identify & suppress rows (i.e. ZIPs) 
 W <- X[!rownames(X) %in% c(zeroSRCzip),1:19]
 W_bak <- W
 
-zip99999_Widx <- which(rownames(W)=="99999")  #  bogus ZIP code number
-zip10463_Widx <- which(rownames(W)=="10463")  #  Riverdale in the Bronx
-zip11430_Widx <- which(rownames(W)=="11430")  #  JFK, Queens 
 
-#levels(W[,1])
-#levels(W[,1]) <- c("NA",levels(W[,1])[2:6])     # does not introduce a real "NA"
-#levels(W[,1]) <- c("99999",levels(W[,1])[2:6])
-#levels(W[zip99999_Widx,1]) <- "NA"              # error introduces a real "NA"
-#W <- cbind(Borough=as.factor(as.character(unlist(W$Borough))),W[,-1])
-levels(W$Borough)  # check that "99999" has disappeared as level and observation
-
+if (yearNbr == 2010) {
+    zip99999_Widx <- which(rownames(W)=="99999")  #  bogus ZIP code number
+    zip10281_Widx <- which(rownames(W)=="10281")  #  Battery Park City in Manhattan
+    zip11430_Widx <- which(rownames(W)=="11430")  #  JFK, Queens 
+} else if (yearNbr == 2014) {
+    zip99999_Widx <- which(rownames(W)=="99999")  #  bogus ZIP code number
+    zip10463_Widx <- which(rownames(W)=="10463")  #  Riverdale in the Bronx
+    zip11430_Widx <- which(rownames(W)=="11430")  #  JFK, Queens 
+} else if (yearNbr == 2018) {
+    zip99999_Widx <- which(rownames(W)=="99999")  #  bogus ZIP code number
+    zip11430_Widx <- which(rownames(W)=="11430")  #  JFK, Queens 
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
 
 # ###########################
 ## discretize modality counts with bins, containing roughly same number of ZIP codes 
 # ###########################
 {
+    # if (yearNbr == 2010) {
+    #     # HousCond
+    #     summary(W$HousCond)
+    #     bins_HousCond <- c(18,57,80)
+    #     mods_HousCond <- c("L","H","VH","OC")
+    #     cat("HousCond:\n   below or equal to",bins_HousCond[1],"RFCs - bin count:",length(which(W$HousCond<=bins_HousCond[1])),"\n")
+    #     cat("   between",bins_HousCond[1]+1,"and",bins_HousCond[2],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[1] & W$HousCond<=bins_HousCond[2])),"\n")
+    #     cat("   between",bins_HousCond[2]+1,"and",bins_HousCond[3],"RFCs- bin count:", length(which(W$HousCond>bins_HousCond[2] & W$HousCond<=bins_HousCond[3])),"\n")
+    #     cat("   above",bins_HousCond[3],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[3])),"\n")
+    #     
+    #     W$HousCond[which(W_bak$HousCond <= bins_HousCond[1])] <- mods_HousCond[1]
+    #     W$HousCond[which(W_bak$HousCond > bins_HousCond[1] & W_bak$HousCond <= bins_HousCond[2])] <- mods_HousCond[2] 
+    #     W$HousCond[which(W_bak$HousCond > bins_HousCond[2] & W_bak$HousCond <= bins_HousCond[3])] <- mods_HousCond[3]
+    #     W$HousCond[which(W_bak$HousCond > bins_HousCond[3])] <- mods_HousCond[4]
+    #     
+    #     W$HousCond <- as.factor(W$HousCond)
+    #     
+    # } else if (yearNbr == 2014) {
+    #     # HousCond
+    #     summary(W$HousCond)
+    #     bins_HousCond <- c(3,7,13)
+    #     mods_HousCond <- c("VL","L","M","H")
+    #     cat("HousCond:\n   below or equal to",bins_HousCond[1],"RFCs - bin count:",length(which(W$HousCond<=bins_HousCond[1])),"\n")
+    #     cat("   between",bins_HousCond[1]+1,"and",bins_HousCond[2],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[1] & W$HousCond<=bins_HousCond[2])),"\n")
+    #     cat("   between",bins_HousCond[2]+1,"and",bins_HousCond[3],"RFCs- bin count:", length(which(W$HousCond>bins_HousCond[2] & W$HousCond<=bins_HousCond[3])),"\n")
+    #     cat("   above",bins_HousCond[3],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[3])),"\n")
+    #     
+    #     W$HousCond[which(W_bak$HousCond<=bins_HousCond[1])] <- mods_HousCond[1]
+    #     W$HousCond[which(W_bak$HousCond>bins_HousCond[1] & W_bak$HousCond<=bins_HousCond[2])] <- mods_HousCond[2] 
+    #     W$HousCond[which(W_bak$HousCond>bins_HousCond[2] & W_bak$HousCond<=bins_HousCond[3])] <- mods_HousCond[3]
+    #     W$HousCond[which(W_bak$HousCond>bins_HousCond[3])] <- mods_HousCond[4]
+    #     
+    #     W$HousCond <- as.factor(W$HousCond)
+    #     
+    # } else if (yearNbr == 2018) {
+    #     # HousCond
+    #     summary(W$HousCond)
+    #     bins_HousCond <- c(3,7,13)
+    #     mods_HousCond <- c("VL","L","M","H")
+    #     cat("HousCond:\n   below or equal to",bins_HousCond[1],"RFCs - bin count:",length(which(W$HousCond<=bins_HousCond[1])),"\n")
+    #     cat("   between",bins_HousCond[1]+1,"and",bins_HousCond[2],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[1] & W$HousCond<=bins_HousCond[2])),"\n")
+    #     cat("   between",bins_HousCond[2]+1,"and",bins_HousCond[3],"RFCs- bin count:", length(which(W$HousCond>bins_HousCond[2] & W$HousCond<=bins_HousCond[3])),"\n")
+    #     cat("   above",bins_HousCond[3],"RFCs - bin count:", length(which(W$HousCond>bins_HousCond[3])),"\n")
+    #     
+    #     W$HousCond[which(W_bak$HousCond<=bins_HousCond[1])] <- mods_HousCond[1]
+    #     W$HousCond[which(W_bak$HousCond>bins_HousCond[1] & W_bak$HousCond<=bins_HousCond[2])] <- mods_HousCond[2] 
+    #     W$HousCond[which(W_bak$HousCond>bins_HousCond[2] & W_bak$HousCond<=bins_HousCond[3])] <- mods_HousCond[3]
+    #     W$HousCond[which(W_bak$HousCond>bins_HousCond[3])] <- mods_HousCond[4]
+    #     
+    #     W$HousCond <- as.factor(W$HousCond)
+    #     
+    # } else {
+    #     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    #     exit()
+    # }
     # HousCond
     summary(W$HousCond)
     bins_HousCond <- c(3,7,13)
@@ -359,6 +416,7 @@ levels(W$Borough)  # check that "99999" has disappeared as level and observation
     W$Felony[which(W_bak$Felony>bins_Felony[3])] <- mods_Felony[4]
     
     W$Felony <- as.factor(W$Felony)
+    
 }
 
 cat("Active categorical factors:",names(W[which(sapply(W, is.factor))]),"\n")
@@ -383,26 +441,32 @@ rm(Wp)
 ## Boroughs' Crime Index tables and bar plots
 # ###########################
 
+WbogusZIP <- W[which(W$Borough == "99999"), ]
+Z <- W[which(W$Borough != "99999"), ]
+Z$Borough <- factor(Z$Borough)  
+levels(Z$Borough)  # check that "99999" has disappeared as level and observation
+
 par(mfrow = c(1,3))
 
 # VIOLATIONS
 crimeDistScale <- c("L","M","MH","H")
-(BCIviol <- with(W,table(Borough,Violation))[,order(match(colnames(with(W,table(Borough,Violation))),
+(BCIviol <- with(Z,table(Borough,Violation))[,order(match(colnames(with(Z,table(Borough,Violation))),
                                                           crimeDistScale ))])
-summar <- summary(W$Violation)
+summar <- summary(Z$Violation)
 tableColName <- c()
 for (cc in crimeDistScale) {
     tableColName <- c(tableColName,paste(cc,summar[labels(summar)==cc]))
 }
 colnames(BCIviol) <- tableColName
 
-BCIviol_norm <- sweep(BCIviol,1,margin.table(BCIviol,1),"/") # row-wise normalized market segmentation for each brand
+BCIviol_norm <- sweep(BCIviol,1,margin.table(BCIviol,1),"/") # row-wise normalized segmentation
 #BCIviol_norm <- prop.table(BCIviol,1)  # same as above
 apply(BCIviol_norm,1,function(x) sum(x)) # check that all rows sum up to 1
 #BCIviol_norm <- BCIviol_norm[order(BCIviol_norm[,4],-BCIviol_norm[,1]),]
 BCIviol_norm = t(BCIviol_norm)  # transpose to be able to use stacked barplot
 
-title=paste0('Violations (',sum(W_bak$Violation),')\n(April 2014)')
+title=paste0('Violations (',sum(W_bak$Violation),')',
+            '\n(',month.name[monthNbr],' ',yearNbr,')')
 barplot(round(BCIviol_norm*100,0),
         ylab="Normalized segmentation (%)",
         main=title,
@@ -420,10 +484,10 @@ barplot(round(BCIviol_norm*100,0),
 
 # MISDEMEANORS
 crimeDistScale <- c("M","H","VH","OC")
-(BCImisd <- with(W,table(Borough,Misdemeanor))
-    [,order(match(colnames(with(W,table(Borough,Misdemeanor))),crimeDistScale))])
+(BCImisd <- with(Z,table(Borough,Misdemeanor))
+    [,order(match(colnames(with(Z,table(Borough,Misdemeanor))),crimeDistScale))])
 
-summar <- summary(W$Misdemeanor)
+summar <- summary(Z$Misdemeanor)
 tableColName <- c()
 for (cc in crimeDistScale) {
     tableColName <- c(tableColName,paste(cc,summar[labels(summar)==cc]))
@@ -434,7 +498,8 @@ BCImisd_norm <- sweep(BCImisd,1,margin.table(BCImisd,1),"/") # row-wise normaliz
 apply(BCImisd_norm,1,function(x) sum(x)) # check that all rows sum up to 1
 BCImisd_norm = t(BCImisd_norm)  # transpose to be able to use stacked barplot
 
-title=paste0('Misdemeanors (',sum(W_bak$Misdemeanor),')\n(April 2014)')
+title=paste0('Misdemeanors (',sum(W_bak$Misdemeanor),')',
+             '\n(',month.name[monthNbr],' ',yearNbr,')')
 barplot(round(BCImisd_norm*100,0),
         #ylab="Normalized segmentation (%)",
         main=title,
@@ -452,9 +517,9 @@ barplot(round(BCImisd_norm*100,0),
 
 # FELONIES
 crimeDistScale <- c("ML","M","H","VH")
-(BCIfelon <- with(W,table(Borough,Felony))[,order(match(colnames(with(W,table(Borough,Felony))),
+(BCIfelon <- with(Z,table(Borough,Felony))[,order(match(colnames(with(Z,table(Borough,Felony))),
                                                         crimeDistScale))])
-summar <- summary(W$Felony)
+summar <- summary(Z$Felony)
 tableColName <- c()
 for (cc in crimeDistScale) {
     tableColName <- c(tableColName,paste(cc,summar[labels(summar)==cc]))
@@ -465,7 +530,8 @@ BCIfelon_norm <- sweep(BCIfelon,1,margin.table(BCIfelon,1),"/") # row-wise norma
 apply(BCIfelon_norm,1,function(x) sum(x)) # check that all rows sum up to 1
 BCIfelon_norm = t(BCIfelon_norm)  # transpose to be able to use stacked barplot
 
-title=paste0('Felonies (',sum(W_bak$Felony),')\n(April 2014)')
+title=paste0('Felonies (',sum(W_bak$Felony),')',
+             '\n(',month.name[monthNbr],' ',yearNbr,')')
 barplot(round(BCIfelon_norm*100,0),
         #ylab="Normalized segmentation (%)",
         main=title,
@@ -495,6 +561,11 @@ library(nnet)
 
 J <-0  # initialize total number of modalities (after binning each active categorical var)
 colHeader <- c()
+# W <- as.data.frame(rbind(as.matrix(W),as.matrix(WbogusZIP)))
+# #W <- cbind(apply(W[,1:17],2,factor),apply(W[,18:19],2,as.integer))
+# W <- cbind(apply(W[,1:17],2,factor),W[,18:19])
+# length(names(W[which(sapply(W, is.factor))]))
+
 Nmod <- length(which(lapply(W[,-1],is.factor)==TRUE))
 for (nn in 1:Nmod) {
     colHeader <- c( colHeader,paste0(colnames(W)[nn+1],"_",levels(W[,nn+1])) )
@@ -507,28 +578,42 @@ rownames(Windic) <- rownames(W)
 colnames(Windic) <- colHeader
 # check that sum of rows equals nbr of active categorical variables: ok
 
-#dim(W[,-1])
+dim(W[,-1])
 
-#W <- cbind(Borough=as.character(unlist(W$Borough)),W[,-1])
+if (yearNbr == 2010) {
+    supObservations <- c(zip10281_Widx, zip99999_Widx, zip11430_Widx)
+    Boroughs <- W[-c(zip10281_Widx, zip99999_Widx, zip11430_Widx),1]
+} else if (yearNbr == 2014) {
+    supObservations <- c(zip10463_Widx, zip99999_Widx, zip11430_Widx)
+    Boroughs <- W[-c(zip10463_Widx, zip99999_Widx, zip11430_Widx),1]
+} else if (yearNbr == 2018) {
+    supObservations <- c(zip99999_Widx, zip11430_Widx)
+    Boroughs <- W[-c(zip99999_Widx, zip11430_Widx),1]
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
+Boroughs <- factor(Boroughs)  # clean up factor levels
 
-mcaNYC311 <- MCA(W[,-1],ncp=5,
+
+mcaNYC311 <- MCA(W[,-1],
+                 ncp=5,
+                 ind.sup=supObservations,
                  quanti.sup=c(17,18),
-                 ind.sup=c(zip10463_Widx,zip99999_Widx, zip11430_Widx),
-                 #quali.sup=c(1),
                  excl=NULL,
-                 graph = T,
+                 graph = TRUE,
                  level.ventil = 0.00,
                  axes = c(1,2),
                  row.w = NULL,
                  method="Indicator",
                  na.method="NA",
-                 tab.disj=NULL)
+                 tab.disj=NULL
+                 )
 
 summary(mcaNYC311,nbelements=12)
 dimdesc(mcaNYC311)
 
-Boroughs <- W[-c(zip10463_Widx,zip99999_Widx,zip11430_Widx),1]
-Boroughs <- factor(Boroughs)
+
 
 mcaPlot1 <- plot.MCA(mcaNYC311,
                     #mcaNYC311$ind$coord[,1],mcaNYC311$ind$coord[,2],
@@ -561,7 +646,8 @@ mcaPlot2
 
 mcaPlot3 <- plot.MCA(mcaNYC311,
                     #mcaNYC311$ind$coord[,1],mcaNYC311$ind$coord[,2],
-                    title="Composite variables' bi-plot projection in PC1-2\n(MCA on April 2014 NYC data)",
+                    title=paste0("Composite variables' bi-plot projection in PC1-2\n(MCA on ",
+                                month.name[monthNbr]," ",yearNbr," NYC data)"),
                     choix="var",
                     autoLab="yes",
                     cex=0.9,
@@ -571,7 +657,8 @@ mcaPlot3 <- plot.MCA(mcaNYC311,
 mcaPlot3+ abline(a=c(0,0),b=0.44,lty=2,lwd=2,col="gray")
 
 mcaPlot4 <- fviz_mca_var(mcaNYC311,
-                         title="a) Variables' projection in PC1-2 (all)\n(MCA on April 2014 NYC data)",
+                         title=paste0("a) Variables' projection in PC1-2 (all)\n(MCA on ",
+                                      month.name[monthNbr]," ",yearNbr," NYC data)"),
                          axes = c(1, 2),
                          geom=c("arrow","text"),
                          label=c("var","quanti.sup"),
@@ -587,10 +674,11 @@ mcaPlot4 <- fviz_mca_var(mcaNYC311,
                          repel=TRUE,
                          legend=NULL)
 #mcaPlot4 + points(mcaNYC311$var$coord[c(53:64),1],mcaNYC311$var$coord[c(53:64),2],pch=17,pointsize=2,col="red")         
-mmcaPlot5caPlot4
+mcaPlot4
 
 mcaPlot5 <- fviz_mca_var(mcaNYC311,
-                         title="b) Variables' projection in PC1-2 (cos2>0.2)\n(MCA on April 2014 NYC data)",
+                         title=paste0("b) Variables' projection in PC1-2 (cos2>0.2)\n(MCA on ",
+                                      month.name[monthNbr]," ",yearNbr," NYC data)"),
                          axes = c(1, 2),
                          geom=c("arrow","text"),
                          label=c("var","quanti.sup"),
@@ -610,7 +698,8 @@ mcaPlot5
 
 # simple plot of color-code projection of indiv. in PC1-2, with cos2 thermometer bar 
 mcaPlot6 <- fviz_mca_ind(mcaNYC311,
-             title="a) Individuals' projection in PC1-2\n(MCA on April 2014 NYC data)",
+             title=paste0("a) Individuals' projection in PC1-2\n(MCA on ",
+                          month.name[monthNbr]," ",yearNbr," NYC data)"),
              axes = c(1, 2),
              geom="point",
              #col.ind = "coord",
@@ -628,7 +717,8 @@ mcaPlot6
 
 # simple plot of color-code projection of indiv. in PC1-2; color code is by borough 
 mcaPlot7 <- fviz_mca_ind(mcaNYC311,
-             title="b) Individuals' projection in PC1-2, by NYC borough\n(MCA on April 2014 NYC data)",
+             title=paste0("b) Individuals' projection in PC1-2, by NYC borough\n(MCA on ",
+                          month.name[monthNbr]," ",yearNbr," NYC data)"),
              axes = c(1, 2),
              geom="point",
              pointsize=1.5,
@@ -640,7 +730,8 @@ mcaPlot7 +  scale_color_manual(values = ccolors)
 
 # plot 3 crime categorical variables with modalities' levels identified by color-coded ellipses in PC1-2
 mcaPlot8 <- fviz_mca_ind(mcaNYC311,
-                         title="Individuals' projection in PC1-2, with crime levels\n(MCA on April 2014 NYC data)",
+                         title=paste0("Individuals' projection in PC1-2, with crime levels\n(MCA on ",
+                                      month.name[monthNbr]," ",yearNbr," NYC data)"),
                          axes = c(1, 2),
                          geom="point",
                          textcol="black",

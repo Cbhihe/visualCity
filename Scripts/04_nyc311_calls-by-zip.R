@@ -3,7 +3,7 @@
 ## Script:      04_nyc311_calls-by-zip.R
 ## Author:      Cedric Bhihe
 ## Delivery:    January 2019
-## Last edit:   
+## Last edit:   October 2018
 # #############################
 
 rm(list=ls(all=TRUE))
@@ -14,9 +14,6 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
 
 
 # #############################
@@ -41,6 +38,10 @@ csvSaveF <- function(dataObj,targetfile) {
                 row.names=F,
                 col.names=T)
 }    # save cvs to file
+
+exit <- function() {
+    .Internal(.invokeRestart(list(NULL, NULL), NULL))
+}    # exit function. Use with caution: not standard, depends on OS's internals
 
 
 # #############################
