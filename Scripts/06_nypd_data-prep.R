@@ -15,28 +15,12 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 
-## colors defined in '01_nyc311_input-parameters.R'
-# ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-#           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
-
 
 # #############################
 ## Input parameters
 # #############################
 source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...
-
-periodStart <- as.Date(paste0(yearNbr,"-",
-                              ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
-                              ifelse(dayNbr<10,paste0("0",as.character(dayNbr)),as.character(dayNbr))))
-
-daysInMonth <- as.numeric(difftime(addMonthF(periodStart,1),periodStart))
-
-periodEnd <- as.Date(paste0(yearNbr,"-",
-                            ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
-                            daysInMonth))
 
 
 # #############################
@@ -73,142 +57,147 @@ addMonthF <- function(date,n) {
 
 whichBoxF <- function(x0,y0,shape) {
 
-  if ( !is.list(shape) | !is.numeric(x0) | !is.numeric(y0) ) {
-    cat("Arg type error in function whichBoxF().\nArgs should be of type \"numeric\",\"numeric\",\"shape\".\n\n")
-    stop
-  } else {
-    
-    index_lst <- c()
-    # #############
-    ## MALFORMED POLYGONS 
-    # #############
-    # take out last 303-276 = 27 points out of polygon # 178, to make it a closed domain
-    shape[[178]]$x <- shape[[178]]$x[1:276]
-    shape[[178]]$y <- shape[[178]]$y[1:276]  
-    # #############
-    
-    for ( bb in 1:length(shape) ){
-      # Note: shape[[bb]]$box   is vector c(Xmin,Ymin,Xmax,Ymax)
-      # if inside the box, keep ZIP code index `bb`
-      if ( x0 >= shape[[bb]]$box[1] & x0 <= shape[[bb]]$box[3] &
-           y0 >= shape[[bb]]$box[2] & y0 <= shape[[bb]]$box[4] ) { index_lst <- c(index_lst,bb) }
-    }
-    
-    if (length(index_lst) == 0) {
-      # cat("... no ZIP found\n")
-      index <- NA
-    } else if (length(index_lst)==1) {
-      # cat("... only one ZIP found\n")
-      index <- index_lst[1]
+    if ( !is.list(shape) | !is.numeric(x0) | !is.numeric(y0) ) {
+        cat("Arg type error in function whichBoxF().\nArgs should be of type \"numeric\",\"numeric\",\"shape\".\n\n")
+        stop
     } else {
-      bb_IN <- c()
-      for (bb in index_lst) {
-
-        # scan area over perimeter's x and y coordinates simultaneously
-        # polygon's perimeter identified by index `bb` 
-        # cflagx, pflagx -- current and previous flags for x scan
-        # cflagy, pflagy -- current and previous flags for y scan
-        xintercepts <- c(); yintercepts <- c()
-        pflagx <- 0; cflagx <- 0
-        pflagy <- 0; cflagy <- 0
+        index_lst <- c()
+        for ( bb in 1:length(shape) ){
+            # Note: shape[[bb]]$box   is vector c(Xmin,Ymin,Xmax,Ymax)
+            # if inside the box, keep ZIP code index `bb`
+            if ( x0 >= shape[[bb]]$box[1] & x0 <= shape[[bb]]$box[3] &
+                 y0 >= shape[[bb]]$box[2] & y0 <= shape[[bb]]$box[4] ) { 
+                index_lst <- c(index_lst,bb) 
+                # cat ('Box ',bb,' found for (x0,y0) in shape\n')
+                # flush.console()
+                }
+            
+        }
         
-        for (ii in 1:length(shape[[bb]]$x)) {
-          if (ii != 1) { pflagx <- cflagx ;  pflagy <- cflagy }
-          cflagx <- ifelse( x0 <= shape[[bb]]$x[ii], +1, -1 )
-          cflagy <- ifelse( y0 <= shape[[bb]]$y[ii], +1, -1 )
-          
-          if (ii == 1) { pflagx <- cflagx; pflagy <- cflagy }
-          
-          if (cflagx * pflagx < 0) {
-            # change of flagx's sign
-            # retrieve previous point's coordinates (xp,yp)
-            xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
-            # retrieve current point's coordinates (xc,yc)
-            xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
-            # compute polygon's boundary's y intercept
-            if( x0 != xc ) {
-              y <- (yc*(x0-xp) +yp*(xc-x0))/(xc-xp)
-              yintercepts <- c(yintercepts,y)
-            } else {
-              # in case the POI (x0,y0) belongs to ZIP area boundary
-              y <- yc*(x0-xp)/(xc-xp)
-              yintercepts <- c(yintercepts,y-1,y+1)
+        if (length(index_lst) == 0) {
+            # cat("... no ZIP found\n") # <<<<<<<<<<<<< DEBUG
+            # flush.console() # <<<<<<<<<<<<< DEBUG
+            index <- NA
+        } else if (length(index_lst)==1) {
+            # cat("... only one ZIP found\n")  # <<<<<<<<<<<<< DEBUG
+            # flush.console() # <<<<<<<<<<<<< DEBUG
+            index <- index_lst[1]
+        } else {
+            # cat("... ",length(index_lst)," ZIP found\n")  # <<<<<<<<<<<<< DEBUG
+            # flush.console() # <<<<<<<<<<<<< DEBUG
+            bb_IN <- c()
+            for (bb in index_lst) {
+                # scan area over perimeter's x and y coordinates simultaneously
+                # polygon's perimeter identified by index `bb` 
+                # cflagx, pflagx -- current and previous flags for x scan
+                # cflagy, pflagy -- current and previous flags for y scan
+                xintercepts <- c(); yintercepts <- c()
+                pflagx <- 0; cflagx <- 0
+                pflagy <- 0; cflagy <- 0
+                
+                for (ii in 1:length(shape[[bb]]$x)) {
+                    if (ii != 1) { pflagx <- cflagx ;  pflagy <- cflagy }
+                    cflagx <- ifelse( x0 <= shape[[bb]]$x[ii], +1, -1 )
+                    cflagy <- ifelse( y0 <= shape[[bb]]$y[ii], +1, -1 )
+                    
+                    if (ii == 1) { pflagx <- cflagx; pflagy <- cflagy }
+                    
+                    if (cflagx * pflagx < 0) {
+                        # change of flagx's sign
+                        # retrieve previous point's coordinates (xp,yp)
+                        xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
+                        # retrieve current point's coordinates (xc,yc)
+                        xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
+                        # compute polygon's boundary's y intercept
+                        if( x0 != xc ) {
+                            y <- (yc*(x0-xp) +yp*(xc-x0))/(xc-xp)
+                            yintercepts <- c(yintercepts,y)
+                        } else {
+                            # in case the POI (x0,y0) belongs to ZIP area boundary
+                            y <- yc*(x0-xp)/(xc-xp)
+                            yintercepts <- c(yintercepts,y-1,y+1)
+                        }
+                    }
+                    
+                    if (cflagy * pflagy < 0) {
+                        # change of flagy's sign
+                        # retrieve previous point's coordinates (xp,yp)
+                        xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
+                        # retrieve current point's coordinates (xc,yc)
+                        xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
+                        # compute polygon's boundary's y intercept
+                        if (y0 != yc) {
+                            x <- (xc*(y0-yp) +xp*(yc-y0))/(yc-yp)
+                            xintercepts <- c(xintercepts,x)
+                        } else {
+                            # in case the POI (x0,y0) belongs to ZIP area boundary
+                            x <- xc*(y0-yp)/(yc-yp)
+                            xintercepts <- c(xintercepts,x-1,x+1)
+                        }
+                    }
+                    
+                }
+                # nbr of intercepts always even or nil for closed perimeters
+                stopifnot(length(xintercepts) %% 2 == 0 & length(yintercepts) %% 2 == 0)
+                # check whether (x0,y0) is IN or OUT (redundant on x and y for consistency)
+                # (x0,y0) is IN if:
+                #    nbr of x-intercepts < x0    AND
+                #    nbr of x-intercepts > x0    AND
+                #    nbr of y-intercepts < y0    AND
+                #    nbr of y-intercepts > y0
+                # are odd
+                if (length(xintercepts[xintercepts < x0]) %% 2 == 1 &
+                    length(yintercepts[yintercepts < y0]) %% 2 == 1) bb_IN <- c(bb_IN,bb)
             }
-          }
-          
-          if (cflagy * pflagy < 0) {
-            # change of flagy's sign
-            # retrieve previous point's coordinates (xp,yp)
-            xp <- shape[[bb]]$x[ii-1]; yp <- shape[[bb]]$y[ii-1]
-            # retrieve current point's coordinates (xc,yc)
-            xc <- shape[[bb]]$x[ii]  ; yc <- shape[[bb]]$y[ii]
-            # compute polygon's boundary's y intercept
-            if (y0 != yc) {
-              x <- (xc*(y0-yp) +xp*(yc-y0))/(yc-yp)
-              xintercepts <- c(xintercepts,x)
+            
+            if( length(bb_IN) == 0) {
+                index <- NA
+            } else if ( length(bb_IN) == 1 ) {
+                index <- bb
             } else {
-              # in case the POI (x0,y0) belongs to ZIP area boundary
-              x <- xc*(y0-yp)/(yc-yp)
-              xintercepts <- c(xintercepts,x-1,x+1)
+                # several boxes and corresponding ZIP codes contain the POI (x0,y0)
+                # compute smallest box and pick coresponding index
+                boxareas <- c()
+                for (bb in bb_IN) {
+                    boxareas <- c(boxareas,(shape[[bb]]$box[3] - shape[[bb]]$box[1])*(shape[[bb]]$box[4] - shape[[bb]]$box[2]))
+                }
+                index <- bb_IN[ which (boxareas == min(boxareas)) ]
             }
-          }
-          
         }
-        # nbr of intercepts always even or nil for closed perimeters
-        stopifnot(length(xintercepts) %% 2 == 0 & length(yintercepts) %% 2 == 0)
-        # check whether (x0,y0) is IN or OUT (redundant on x and y for consistency)
-        # (x0,y0) is IN if:
-        #    nbr of x-intercepts < x0    AND
-        #    nbr of x-intercepts > x0    AND
-        #    nbr of y-intercepts < y0    AND
-        #    nbr of y-intercepts > y0
-        # are odd
-        if (length(xintercepts[xintercepts < x0]) %% 2 == 1 &
-            length(yintercepts[yintercepts < y0]) %% 2 == 1) bb_IN <- c(bb_IN,bb)
-      }
-      
-      if( length(bb_IN) == 0) {
-        index <- NA
-      } else if ( length(bb_IN) == 1 ) {
-        index <- bb
-      } else {
-        # several boxes and corresponding ZIP codes contain the POI (x0,y0)
-        # compute smallest box and pick coresponding index
-        boxareas <- c()
-        for (bb in bb_IN) {
-          boxareas <- c(boxareas,(shape[[bb]]$box[3] - shape[[bb]]$box[1])*(shape[[bb]]$box[4] - shape[[bb]]$box[2]))
-        }
-        index <- bb_IN[ which (boxareas == min(boxareas)) ]
-      }
+        
+        
+        # Algorithm below was tried first.
+        # it works but does not discriminate well.
+        #   alpha <- c()  # scanned angles
+        #   Dist2 <- c()  # scanned radii squared  (computed from (x0,y0) to scanned perimeter)
+        #   for (bb in index_lst) {
+        #     
+        #     for (ii in length(shape[[bb]]$x)) {
+        #       alpha <- c(alpha,round(acos((shape[[bb]]$x[ii]-x0)/sqrt((shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2))/pi,5))
+        #       Dist2 <- c( Dist2 , (shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2 )  }
+        #     
+        #     aRange <- c(aRange,max(alpha)-min(alpha))  # keep alpha ranges
+        #     scannedDist2 <- c(scannedDist2, mean(Dist2))
+        #   }
+        #   
+        #   locRes <- list( ZIPindex = index_lst, alphaRange = aRange , meanScanRadius = scannedDist2)
+        # 
+        #   aRange_max <- max(locRes$alphaRange)
+        #   meanScanRadius_min <- min(locRes$meanScanRadius)
+        #   small_list_index_lst <- which( (aRange_max - locRes$alphaRange ) / aRange_max <= 0.02 )  # meta-index or "index of index"
+        #   if (length(small_list_index_lst) > 1 ) {
+        #     index <- locRes$ZIPindex[small_list_index_lst[ which(locRes$meanScanRadius[small_list_index_lst] == min(locRes$meanScanRadius[small_list_index_lst]) ) ]]
+        #   } else { 
+        #     index <- index_lst[1] 
+        #   }
+        # returns index in `mapZIP$ZIPCODE` list
     }
-      
-      
-      # Algorithm below works but does not discriminate well
-      #   alpha <- c()  # scanned angles
-      #   Dist2 <- c()  # scanned radii squared  (computed from (x0,y0) to scanned perimeter)
-      #   for (bb in index_lst) {
-      #     
-      #     for (ii in length(shape[[bb]]$x)) {
-      #       alpha <- c(alpha,round(acos((shape[[bb]]$x[ii]-x0)/sqrt((shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2))/pi,5))
-      #       Dist2 <- c( Dist2 , (shape[[bb]]$x[ii]-x0)^2+(shape[[bb]]$y[ii]-y0)^2 )  }
-      #     
-      #     aRange <- c(aRange,max(alpha)-min(alpha))  # keep alpha ranges
-      #     scannedDist2 <- c(scannedDist2, mean(Dist2))
-      #   }
-      #   
-      #   locRes <- list( ZIPindex = index_lst, alphaRange = aRange , meanScanRadius = scannedDist2)
-      # 
-      #   aRange_max <- max(locRes$alphaRange)
-      #   meanScanRadius_min <- min(locRes$meanScanRadius)
-      #   small_list_index_lst <- which( (aRange_max - locRes$alphaRange ) / aRange_max <= 0.02 )  # meta-index or "index of index"
-      #   if (length(small_list_index_lst) > 1 ) {
-      #     index <- locRes$ZIPindex[small_list_index_lst[ which(locRes$meanScanRadius[small_list_index_lst] == min(locRes$meanScanRadius[small_list_index_lst]) ) ]]
-      #   } else { 
-      #     index <- index_lst[1] 
-      #   }
-      # returns index in `mapZIP$ZIPCODE` list
-  }
 }
+
+exit <- function() {
+    .Internal(.invokeRestart(list(NULL, NULL), NULL))
+}    # exit function. Use with caution: not standard, depends on OS's internals
+
 
 # #############################
 ## ZIP of interest
@@ -242,16 +231,28 @@ protoY_raw <- read.csv(paste0("Data/",source_file,".csv"),
 ## Clean-up 1: General categorical variables
 # #############################
 
+
+periodStart <- as.Date(paste0(yearNbr,"-",
+                              ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
+                              ifelse(dayNbr<10,paste0("0",as.character(dayNbr)),as.character(dayNbr))))
+
+daysInMonth <- as.numeric(difftime(addMonthF(periodStart,1),periodStart))
+
+periodEnd <- as.Date(paste0(yearNbr,"-",
+                            ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),"-",
+                            daysInMonth))
+
 ## Choose relevant columns to keep + reorganize
-protoY <- cbind(ZIP=vector(mode="character",length=nrow(protoY_raw)),
-                Date=as.Date(protoY_raw[,2],"%m/%d/%Y"),
-                protoY_raw[,-c(1:11,13:19,22,23)])
-
-names(protoY) <- c("ZIP","Date","offCat","planeX","planeY","GPS")
-
+protoY <- protoY_raw[,c(4,14,31,32,35)]
+names(protoY) <- c("Date","offCat","planeX","planeY","GPS")
+# Change date format
+newFormatDate <- format(as.Date(protoY$Date,"%m/%d/%Y"),"%Y-%m-%d")
+protoY <- cbind(ZIP=rep("",nrow(protoY_raw)),
+                Date=newFormatDate,
+                protoY[,-1])
 # Keep only relevant year,month
-# protoY <- protoY[protoY$Date %in% periodStart:periodEnd,]   # ok for df ?
 protoY <- protoY[as.Date(protoY$Date) %in% periodStart:periodEnd,]
+
 # names(protoY)  # list columns kept so far
 
 ## Save processed raw csv file as `*_proc01.csv``
@@ -269,18 +270,22 @@ class(protoY$offCat)                     # returns "factor"
 cat("\n\nInfraction categories:",length(offCat_lst),"\n\n")
 
 GPS_lst <- as.character(protoY$GPS)
+planeX_lst  <- as.character(protoY$planeX)
+planeY_lst  <- as.character(protoY$planeY)
 GPS_lst[which(GPS_lst=="")] <- NA
-protoY <- cbind(protoY[,c(1:5)],GPS=GPS_lst)
+planeX_lst[which(planeX_lst=="")] <- NA
+planeY_lst[which(planeY_lst=="")] <- NA
+protoY <- cbind(protoY[,c(1:3)],planeX=planeX_lst, planeY=planeY_lst, GPS=GPS_lst)
 
 protoYmissings <- protoY[ (is.na(protoY$planeX) | is.na(protoY$planeY)) & is.na(protoY$GPS), ]
 
 
 # #############################
-## imput ZIP code "99999" to missings
+## Input default ZIP code value "99999" to missings
 # #############################
-protoY_bak <- protoY
+#protoY_bak <- protoY
 impZIP <- as.vector(protoY$ZIP)
-impZIP[ which( (is.na(protoY$planeX) | is.na(protoY$planeY)) & is.na(protoY$GPS)) ] <- "99999"
+impZIP[ which( (is.na(protoY$planeX) | is.na(protoY$planeY) ) & is.na(protoY$GPS)) ] <- "99999"
 protoY <- as.data.frame(cbind(ZIP=impZIP,protoY[,2:6]))
 
 
@@ -317,27 +322,32 @@ csvSaveF(offConcepts,target_file)     # csv to disk
 # use zipped achive at https://data.cityofnewyork.us/Business/Zip-Code-Boundaries/i8iw-xf4u
 mapZIP <- readOGR(dsn="./Data/Geolocation", layer="ZIP_CODE_040114")
 shp <- read.shp("Data/Geolocation/ZIP_CODE_040114.shp", format="list")
+# #############
+## MALFORMED POLYGONS 
+# #############
+# take out last 303-276 = 27 points out of polygon # 178, to make it a closed domain
+shp[[178]]$x <- shp[[178]]$x[1:276]
+shp[[178]]$y <- shp[[178]]$y[1:276]  
+# #############
 
-# Plot deficient polygon nbr 178
-index <- 178  # corresponds to ZIP 11433
-as.character(mapZIP$ZIPCODE[index])  # "11433"
-# plot ZIP perimeter and corresponding box center point
-x0 <- (shp[[index]]$box[1] + shp[[index]]$box[3])/2  # center point's abcissa
-y0 <- (shp[[index]]$box[2]+shp[[index]]$box[4])/2  # center point's ordinate
-
-par(mfrow=c(1,1))
-plot(shp[[index]]$x[1:276], shp[[index]]$y[1:276],type="l",col="blue",xlab="x",ylab="y")
-#plot(shp[[index]]$x, shp[[index]]$y,type="l",col="blue",xlab="x",ylab="y")   # FAULTY !!!
-points(x0,y0,type="p",cex=1,col="green")
-lines(c(shp[[index]]$box[1],shp[[index]]$box[1],shp[[index]]$box[3],shp[[index]]$box[3],shp[[index]]$box[1]),
-      c(shp[[index]]$box[2],shp[[index]]$box[4],shp[[index]]$box[4],shp[[index]]$box[2],shp[[index]]$box[2]),
-      type="l", lwd=1,col="red")
-# plot(mapZIP@polygons[[index]]@Polygons[[1]]@coords[,1],
-#      mapZIP@polygons[[index]]@Polygons[[1]]@coords[,2],
-#      type="l",col="blue",xlab="x",ylab="y")
-par(mfrow=c(1,1))
-
-
+# # Plot deficient polygon nbr 178
+# index <- 178  # corresponds to ZIP 11433
+# as.character(mapZIP$ZIPCODE[index])  # "11433"
+# # plot ZIP perimeter and corresponding box center point
+# x0 <- (shp[[index]]$box[1] + shp[[index]]$box[3])/2  # center point's abcissa
+# y0 <- (shp[[index]]$box[2]+shp[[index]]$box[4])/2  # center point's ordinate
+# 
+# par(mfrow=c(1,1))
+# plot(shp[[index]]$x[1:276], shp[[index]]$y[1:276],type="l",col="blue",xlab="x",ylab="y")
+# #plot(shp[[index]]$x, shp[[index]]$y,type="l",col="blue",xlab="x",ylab="y")   # FAULTY !!!
+# points(x0,y0,type="p",cex=1,col="green")
+# lines(c(shp[[index]]$box[1],shp[[index]]$box[1],shp[[index]]$box[3],shp[[index]]$box[3],shp[[index]]$box[1]),
+#       c(shp[[index]]$box[2],shp[[index]]$box[4],shp[[index]]$box[4],shp[[index]]$box[2],shp[[index]]$box[2]),
+#       type="l", lwd=1,col="red")
+# # plot(mapZIP@polygons[[index]]@Polygons[[1]]@coords[,1],
+# #      mapZIP@polygons[[index]]@Polygons[[1]]@coords[,2],
+# #      type="l",col="blue",xlab="x",ylab="y")
+# par(mfrow=c(1,1))
 
 Nrec <- length(which(as.character(protoY$ZIP) != "99999"))  # nbr of non-missings in protoY
 protoYmissings <- protoY[which(as.character(protoY$ZIP) == "99999"),]
@@ -346,19 +356,32 @@ Nzip <- dim(mapZIP)[1]
 queryZIP <- as.character(mapZIP@data$ZIPCODE)         # list of geolocated ZIPs
 foundZIP <- c()
 
+rm(protoY_bak, protoY_raw, zipcode)
+
+# Check that (planeX, planeY) are complete for whichBoxF() algorithm to apply
+if (length(which( is.na(protoY$planeX) | is.na(protoY$planeY) ) ) != 0) {
+    cat("\n\nCAUTION:\nSome record of \'protoY\' do not have complete (planeX, planeY) pairs.\n-----------Abort !\n")
+    exit()
+}
+
 idx_flag <- 0
 for (rr in 1:Nrec) {
   x0 <- as.numeric(gsub(",","",as.character(protoY$planeX[rr])))
   y0 <- as.numeric(gsub(",","",as.character(protoY$planeY[rr])))   # NYPD coords of crime
+  cat("******** Record ",rr, " with x0=",x0," ,y0=",y0,"\n")  # <<<<<<<<<< DEBUG
   ZIPindex <- whichBoxF(x0,y0,shp)                    # find `queryZIP`'s index for ZIP containing (x0,y0)
- 
+
+  
   if (is.na(ZIPindex))  {
       idx_flag <- idx_flag + 1
-      if (idx_flag == 1) {
-          cat("No ZIP found for obs' index:\n",rr,", ")
-      } else {
-          cat(rr,", ")
-      }
+      cat("No ZIP found for ",rr, "\n")  # <<<<<<<<<< DEBUG + comment 5 next lines
+      # if (idx_flag == 1) {
+      #     cat("No ZIP found for obs' index:\n",rr,", ")
+      # } else {
+      #     cat(rr,", ")
+      # }
+  } else {
+      cat("ZIP found at shp-index: ",ZIPindex,"\n")  # <<<<<<<<<< DEBUG
   }
   
   # accumulate ZIPs and normalize ZIP length to 5 characters
@@ -380,7 +403,7 @@ for (rr in 1:Nrec) {
 
 protoY <- cbind(foundZIP,protoY[,-1])
 names(protoYmissings) <- names(protoY)
-protoY <- rbind(protoY,protoYmissings)
+protoY <- rbind(protoY[1:36602,],protoYmissings)
 names(protoY) <- c("ZIP","Date","offCat","planeX","planeY","GPS")
 target_file <- paste0("Data/",proc_file,"02.csv") 
 csvSaveF(protoY,target_file)     # csv to disk
@@ -409,7 +432,7 @@ chisq.test(twoWayTable)
 # #   distributions at 5% overall risk. 
 # #   We ACCEPT the null hypothesis at the rist 5% of erring. 
 # #   There is NO association of row and column variables.
-# #   We are introducing some bias by suppressing missings.
+# #   We do not introduce any bias by suppressing missings.
 
 # # Conclusion: (for April 2014 NYPD crime data)
 # #   chi-sq=86.671, for DF=2 and highly significant p-value <2.2 e-16, is 
@@ -426,3 +449,11 @@ chisq.test(twoWayTable)
 # #   We REJECT the null hypothesis at the rist 5% of erring. 
 # #   There is significant association of row and column variables.
 # #   We are introducing some bias by suppressing missings.
+# 
+# # Conclusion: (for April 2018 NYPD crime data)
+# #   chi-sq=0.57, for DF=2 and p-value 0.7499, is within the
+# #   [0.05, 7.4] interval from (chi-sq tables) for two-sided
+# #   distributions at 5% overall risk. 
+# #   We CANNOT REJECT the null hypothesis. 
+# #   There is NO association of row and column variables.
+# #   We do not introduce any bias by suppressing missings.

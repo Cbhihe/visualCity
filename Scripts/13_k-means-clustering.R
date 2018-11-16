@@ -8,14 +8,15 @@
 
 rm(list=ls(all=TRUE)) 
 
-# #############################
-## Source parameter file
-# #############################
-
 setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
+
+
+# #############################
+## Source parameter file
+# #############################
 
 source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...
@@ -26,11 +27,11 @@ source(file="Scripts/01_nyc311_input-parameters.R",
 # #############################
 
 setRepositories(ind = c(1:6,8))
-library(FactoMineR)     # to use canned PCA and CA methods. 
-library(factoextra)
+library(FactoMineR)     # to use canned MCA, CA and PCA methods. 
+library(factoextra)     # methods to extract and visualize MVA results
 require(graphics)       # enhanced graphics
-library(ggplot2)        # to enhance graph plotting
-library(ggrepel)
+library(ggplot2)        # enhanced graphs
+library(ggrepel)        # enhanced graphs
 
 
 # #############################
@@ -79,37 +80,38 @@ W <- W[,-1]
 #cntTot <- sum(W[,2:14])  # total nbr of counts
 W_bak <- W
 
-bogusZIP_idx <- which(rownames(W) %in% c("99999","10048"))  #  bogus ZIP codes' indices
+bogusZIP <- c("99999","10048")
+bogusZIP_idx <- which(rownames(W) %in% bogusZIP)  #  bogus ZIP codes' indices
 
-outliersZIP_idx <- c()
 if (yearNbr == 2010) {
     # in April 2010, ZIP 10281 is a major outlier
-    outliersZIP_idx <- which(rownames(W) %in% c("10281","11430"))
+    outliersZIP <- c("10281","11430")
 } else if (yearNbr == 2014) {
     # in April 2014, ZIP "10463" (Riverdale) is a major outlier, 11430" (JFK) a lesser one
-    outliersZIP_idx <- which(rownames(W) %in% c("10463","11430"))
+    outliersZIP <- c("10463","11430")
 } else if (yearNbr == 2018) {
     # in April 2014, ZIP _____ is a major outlier
-    outliersZIP_idx <- which(rownames(W) %in% c("_____","11430"))
+    outliersZIP <- c("11371","11430")
 }
+outliersZIP_idx <- which(rownames(W) %in% outliersZIP)
 ### W <- W[-outliersZIP_idx,]    ### do NOT suppress outliers, use them as sup individuals
     
 Boroughs <- factor(W$Borough[-c(outliersZIP_idx,bogusZIP_idx)])
 levels(Boroughs)  # rid factor's levels of "99999" -- ok
 
-
-mcaNYC311 <- MCA(W[,-1],ncp=5,
-                 quanti.sup=c(17,18),
-                 ind.sup=c(outliersZIP_idx,bogusZIP_idx),
-                 #quali.sup=c(1),
-                 excl=NULL,
-                 graph = T,
-                 level.ventil = 0.00,
+mcaNYC311 <- MCA(W[,-1],
+                 ncp=5,
+                 quanti.sup = c(17,18),
+                 ind.sup = c(outliersZIP_idx,bogusZIP_idx),
+                 excl = NULL,
+                 graph = TRUE,
+                 level.ventil = 0,
                  axes = c(1,2),
                  row.w = NULL,
-                 method="Indicator",
-                 na.method="NA",
-                 tab.disj=NULL)
+                 method = "Indicator",
+                 na.method = "NA",
+                 tab.disj = NULL
+                 )
 
 summary(mcaNYC311,nbelements=12)
 dimdesc(mcaNYC311)
@@ -292,7 +294,7 @@ if (yearNbr == 2010) {
 } else if (yearNbr == 2014) {
     clust_lst <- c(2,5)
 } else if (yearNbr == 2018) {
-    #clust_lst <- c(2,__)
+    clust_lst <- c(2,3,5)
 } else {
     cat("\n\n-----------------------\nYear number not recognized.\nAbort.\n-----------------------\n ")
     exit()
@@ -314,6 +316,7 @@ for (kk in clust_lst) {
     sil <- silhouette(resC$cluster,dist(Psi))
     plot(sil,col=2:(kk+1), main=paste0(letters[cnt],") Silhouette for ",kk," clusters"))
 }
+
 par(mfrow = c(1,1))
 
 # #####################
@@ -323,7 +326,16 @@ par(mfrow = c(1,1))
 # Input for clustering algorithm is psi, even as the PCs form an artificial var space.
 distX <- dist(Psi, method = "euclidean")
 treeX <- hclust(distX, method = "ward.D2")
-Nclusters = clust_lst[3]
+if (yearNbr == 2010) {
+    Nclusters = clust_lst[3]
+} else if (yearNbr == 2014) {
+    Nclusters = clust_lst[2]
+} else if (yearNbr == 2018) {
+    Nclusters = clust_lst[3]
+} else {
+    cat("\n\n-----------------------\nYear number not recognized.\nAbort.\n-----------------------\n ")
+    exit()
+}
 
 #par(mfrow=c(1,2))
 
@@ -334,8 +346,19 @@ plot(treeX,
      xlab='Distance',
      cex=0.7)
 #abline(h=4,col='red')
-segments(0,4.7,170,4.7,col='red')
-text(x=80, y=4.7-0.04, 
+
+if (yearNbr == 2010) {
+    heightCut <- 4.7
+} else if (yearNbr == 2014) {
+    heightCut <- 5
+} else if (yearNbr == 2018) {
+    heightCut <- 4.9
+} else {
+    cat("\n\n-----------------------\nYear number not recognized.\nAbort.\n-----------------------\n ")
+    exit()
+}
+segments(0,heightCut,170,heightCut,col='red')
+text(x=170, y=heightCut-0.04, 
      labels=paste0("(",Nclusters," classes)"),
      cex=0.75,
      pos=3,
@@ -346,8 +369,8 @@ barplot(tail(treeX$height,50),
         xlab='Agglomeration index', 
         main='Clustering heights',
         ylab='Agglomeration criterion\'s value')
-segments(0,4.7,60,4.7,col='red',lty=2)
-text(x=30, y=4.7-0.04,
+segments(0,heightCut,60,heightCut,col='red',lty=2)
+text(x=30, y=heightCut-0.04,
      labels=paste0("Dendrogram tree-cut (",Nclusters," classes)"),
      cex=0.75,
      pos=3,
@@ -664,8 +687,9 @@ for ( cc in unique(as.integer(factor(cutX))) ) {
 
 clusterIEP <- clusterIEP/sum(clusterIEP)*100
 for ( cc in 1:Nclusters) {
-    cat("Cluster's",cc,"normalized contribution to inertia: ",round(clusterIEP[cc],1),"%\n")
+    cat("Cluster",cc,"'s normalized contribution to inertia: ",round(clusterIEP[cc],1),"%\n")
 }
+
 
 # ########################
 ## Topographic plot of color-coded ZIPs, according to cluster classification
@@ -813,12 +837,9 @@ legend("bottomright",
        cex=0.8)
 
 
-
-
-
-# ##########
-# Consolidation using k-means
-# ##########
+# ####################
+## Consolidation using k-means
+# ####################
 
 consolClust <- kmeans(Psi,centers=centroids)
 consolClass <- consolClust$cluster
@@ -861,13 +882,13 @@ Wss <- sum(consolClust$withinss)                             # resC_consol$tot.w
 Ib_consol <- 100*Bss/(Bss+Wss)   # Comparison of Ib before and after consolidation can
                                  # only show an improvement
 
-cat("\n\nClustering quality Index for",Nclusters,"classes, after k-means consolidation, Ib =",round(Ib_consol,2),"\n\n")
+cat("\n\nClustering quality index for",Nclusters,"classes, after k-means consolidation, Ib =",round(Ib_consol,2),"\n\n")
 
 # -----------------------
 # Plots
 
 plottitle <- paste0("Clustering of MCA PC1-2 scores in ",Nclusters," classes\n")
-plottitle <- paste0(plottitle,"after k-means consolidation.\n(",month.name[monthNbr]," ",yearNbr," NYC SRCs with crime data)")
+plottitle <- paste0(plottitle,"after k-means consolidation.\n(NYC 311 + NYPD 911: ",month.name[monthNbr]," ",yearNbr," data)")
 plotdata <- data.frame(PC1=Psi[,1],PC2= Psi[,2],PC3= Psi[,3],
                        z=rownames(Psi))
 centroids.df <- data.frame(PC1=centroids[,1],PC2=centroids[,2],PC3=centroids[,3],
@@ -957,7 +978,7 @@ for ( cc in unique(as.integer(consolClass)) ) {
 
 clusterIEP <- clusterIEP/sum(clusterIEP)*100
 for ( cc in 1:Nclusters) {
-    cat("Cluster's",cc,"normalized contribution to inertia: ",round(clusterIEP[cc],1),"%\n")
+    cat("Cluster",cc,"'s normalized contribution to inertia: ",round(clusterIEP[cc],1),"%\n")
 }
 # ########################
 ## Topographic plot of color-coded ZIPs, 
@@ -998,7 +1019,7 @@ mapZIPborough <- c()
 for (index in mapZIP_idx) {
     mapZIPborough <- c(mapZIPborough,as.character(Wp[as.character(mapZIP$ZIPCODE[index]) == rownames(Wp),1]))
 }
-mapZIPborough <- as.factor(as.numeric(as.factor(mapZIPborough)))
+mapZIPborough <- factor(as.numeric(as.factor(mapZIPborough)))
 # Compute & plot overall area bounding box
 xMinBox <- c() ; yMinBox <- c() ; xMaxBox <- c() ; yMaxBox <- c();
 for (index in mapZIP_idx) {
@@ -1032,8 +1053,10 @@ if (length(clusterCol) < length(levels(as.factor(cutX)))) {
     exit()
 }
 
+# Define colors of each observation dot (according to class)
 for (ii in 1:length(zipClassCol)) {
     if ( ! rownames(Wp[ii,]) %in% rownames(X) ) {
+        # ZIP code not classified or not present in observed sample
         zipClassCol[ii] <- "lightgray"
     } else {
         for (cc in unique(as.integer(consolClass))) {
@@ -1066,40 +1089,42 @@ plot(x=c((xMin+xMax)/2),y=c((yMin+yMax)/2),
 axis(1,at=c(),labels=F,col.axis="black",tck=0)
 axis(2,labels=F,col.axis="black",tck=0)
 
+ii <- 0 ; ii <- ii+1
+
 for ( ii in 1:length(mapZIP_idx) ) {
     index <- mapZIP_idx[ii]
     #lines(shp[[index]]$x, shp[[index]]$y,type="l",col="skyblue",xlab="x",ylab="y") # draw ZIP perimeter
-    lines(shp[[index]]$x, shp[[index]]$y,type="l",col=ccolors[mapZIPborough[ii]],xlab="x",ylab="y") # draw ZIP perimeter
-    
-    # lines(c(shp[[index]]$box[1],shp[[index]]$box[1],shp[[index]]$box[3],shp[[index]]$box[3],shp[[index]]$box[1]),
-    #       c(shp[[index]]$box[2],shp[[index]]$box[4],shp[[index]]$box[4],shp[[index]]$box[2],shp[[index]]$box[2]),
-    #       type="l", lwd=1,col="red") # draw ZIP box
+    lines(shp[[index]]$x, shp[[index]]$y,
+          type="l",
+          col=ccolors[mapZIPborough[ii]],
+          xlab="x",ylab="y"
+          )        # draw ZIP perimeter
     
     ##put zip code string at the center of each zip area bounding box
-    localZIP <- mapZIP$ZIPCODE[index]
+    localZIP <- as.character(mapZIP$ZIPCODE[index])
     # text(x=(xMinBox[ii]+xMaxBox[ii])/2,
     #      y=(yMinBox[ii]+yMaxBox[ii])/2,
     #      adj=0.5,labels=localZIP,
     #      col="steelblue",
     #      cex=0.5)
     
-    if (as.character(localZIP) %in% rownames(Wp)) {
+    if (localZIP %in% as.character(rownames(Wp))) {
         #print(ii)
         points(x=(xMinBox[ii]+xMaxBox[ii])/2,y=(yMinBox[ii]+yMaxBox[ii])/2,
                type = "p",
                col = zipClassCol[which(rownames(zipClassCol) == as.character(localZIP))],
                bg  = zipClassCol[which(rownames(zipClassCol) == as.character(localZIP))],
                pch = 21,
-               cex = 3 * as.numeric(zipWeight[which(labels(zipWeight) == as.character(localZIP))]),
-               alpha=I(1/5)
-        )
+               cex = 3 * as.numeric(zipWeight[which(labels(zipWeight) == as.character(localZIP))]) #,
+               #alpha=I(1/5)
+               )
     }
 }
 legend("topleft",legend=levels(Boroughs),lwd=2,col=ccolors[1:length(levels(Boroughs))], cex=0.8)
 legend("bottomright",
        legend=levels(factor(cutX)),
        pch=16,
-       col=clusterCol, 
+       col=clusterCol[1:Nclusters], 
        horiz=T,
        title="Cluster classes", 
        bty="n", 
@@ -1112,7 +1137,7 @@ legend("bottomright",
 # 5: Using catdes(), interpret cluster and represent them.
 # ############################################
 
-class_descript <- catdes(cbind(as.factor(consolClass),W[which(!rownames(W) %in% c("10463","11430","99999")),2:17]),
+class_descript <- catdes(cbind(as.factor(consolClass),W[which(!rownames(W) %in% c(outliersZIP,bogusZIP)),2:17]),
                          1,
                          proba=0.01,
                          row.w=NULL)
@@ -1163,3 +1188,4 @@ for (cc in 1:length(class_descript$category)) {
         rownames(class_descript$category[[cc]][which(class_descript$category[[cc]][,5]>2),]),"\n\n"
         )
 }
+

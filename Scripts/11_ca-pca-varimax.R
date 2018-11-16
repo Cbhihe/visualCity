@@ -179,7 +179,7 @@ U <- U[,colSums(U) !=0]
 
 # April 2018
 # Nbr of cells to supress: 
-# p-value =~ ____ < 0.01;  so again we reject the null hypothesis (H0) and conclude that we the
+# p-value =~ 0002 < 0.01;  so again we reject the null hypothesis (H0) and conclude that we the
 # suppressed ZIP codes have a non random structure wrt to SRCs' modalities.
 
 # #############################
@@ -275,11 +275,13 @@ pcaY <- PCA(Y_ctd,
 pcaY$eig   
 
 if (yearNbr == 2010) {
-    ind.sup_idx = which(rownames(Y_ctd) %in% c("10281"))  # April 2010
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("10281"))   # April 2010
 } else if (yearNbr == 2014) {
-    ind.sup_idx = which(rownames(Y_ctd) %in% c("10463"))  # April 2014
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("10463"))   # April 2014
 } else if (yearNbr == 2018) {
-    ind.sup_idx = which(rownames(Y_ctd) %in% c("____"))   # April 2018
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("11430", "11371"))   # April 2018
+    # 11430 = JFK airport, Queens
+    # 11371 = La Guardia airport, Queens
 } else {
     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
     exit()
@@ -394,7 +396,7 @@ if (yearNbr == 2010) {
 } else if (yearNbr == 2014) {
     ind.sup_idx = which(rownames(Y_ctd) %in% c("99999","10463"))  # April 2014
 } else if (yearNbr == 2018) {
-    ind.sup_idx = which(rownames(Y_ctd) %in% c("99999","____"))   # April 2018
+    ind.sup_idx = which(rownames(Y_ctd) %in% c("99999","11430","11371"))   # April 2018
 } else {
     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
     exit()
@@ -522,7 +524,7 @@ if (yearNbr == 2010) {
 } else if (yearNbr == 2014) {
     tab[rownames(tab)== "10463",]  # April 2014 -- investigate ZIP 10463 (Riverdale)
 } else if (yearNbr == 2018) {
-    tab[rownames(tab)== "_____",]  # April 2018 -- investigate ZIP _____ ()
+    tab[rownames(tab) %in% c("11430","11371"),]  # April 2018 -- investigate ZIP _____ ()
 } else {
     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
     exit()
@@ -606,8 +608,8 @@ if (yearNbr == 2010) {
     sup_cols <- c(1,9,11,12)
     
 } else if (yearNbr == 2018) {
-    Ysimple <- cbind()
-    sup_cols <- c()
+    Ysimple <- Y
+    sup_cols <- c(5,10,11)
     
 } else {
     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
@@ -730,7 +732,7 @@ if (yearNbr == 2010) {
 } else if (yearNbr == 2014) {
     tab[rownames(tab)== "10463",]  # April 2014 -- investigate ZIP 10463 (Riverdale)
 } else if (yearNbr == 2018) {
-    tab[rownames(tab)== "_____",]  # April 2018 -- investigate ZIP _____ ()
+    tab[rownames(tab) %in% c("11430","11371"),]  # April 2018 -- investigate ZIP _____ ()
 } else {
     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
     exit()
@@ -765,12 +767,47 @@ show(iep.df)
 ## ind + var plot with FactoMineR
 # ########################
 
-par(mfrow = c(1,3))
-Ysimple_ctd <- cbind(HousCond=Y_ctd[,1],EPsani=Y_ctd[,2]+Y_ctd[,13],Y_ctd[,3:8],Y_ctd[,9:12])
-#Ysimple_ctd <- cbind(Y_ctd[,c(1,3:8)],EPwater=Y_ctd[,2]+Y_ctd[,9]+Y_ctd[,13],Y_ctd[,10:12])
-ind.sup_idx <- which(rownames(Ysimple_ctd) %in% c("99999","10463"))
-col.sup_idx <- which(colnames(Ysimple_ctd) %in% c("IAO","SocServ","WaterSyst","HousCond"))
 
+if (yearNbr == 2010) {
+    ## April 2010
+    # ########################
+    # "EnvProt" and "WaterSyst" are strongly correlated in PC1-2-3
+    # "IAO", "NoiseTraf" and "SocServ" are weakly correlated with PCs and can be dispensed with.
+    
+    Ysimple_ctd <- cbind(HousCond=Y_ctd[,1],EPsani=Y_ctd[,2]+Y_ctd[,13],Y_ctd[,3:8],Y_ctd[,9:12])
+    ind.sup_idx <- which(rownames(Ysimple_ctd) %in% c("99999","11430", "10281"))
+    col.sup_idx <- which(colnames(Ysimple_ctd) %in% c("IAO","SocServ","WaterSyst","HousCond"))
+    
+} else if (yearNbr == 2014) {
+    ## April 2014
+    # ########################
+    # "EnvProt" and "Sani"  are weakly correlated with 3 first PCs and are collinear
+    #   => add corresponding frequencies in new feature "EPsani", to decrease dimensionality
+    # EnvProt and WaterSyst appear strongly correlated in planes PC1-2 and PC1-3, but anti-
+    #   correlated in PC2-3. WaterSyst has a poor Inertia Explanatory Power with IEP < 5%
+    #   for the retained significant dimensions.  Eliminate "WaterSyst" to reduce dimensionality.
+    Ysimple_ctd <- cbind(EPsani=Y_ctd[,1]+Y_ctd[,13],Y_ctd[,c(2:12)])
+    ind.sup_idx <- which(rownames(Ysimple_ctd) %in% c("99999","10430", "10048"))
+    col.sup_idx <- which(colnames(Ysimple_ctd) %in% c("IAO","SocServ","WaterSyst"))
+    
+} else if (yearNbr == 2018) {
+    ## April 2018
+    # ########################
+    # "EnvProt", "Sani" and "WaterSyst" are not collinear pairwise
+    # On the other hand IAO, SOcServ and WaterSyst seems both weakly correlated and rather 
+    # poorly represented with significant dimensions.
+    # Eliminate them to reduce dimensionality.
+    Ysimple_ctd <- Y_ctd
+    ind.sup_idx <- which(rownames(Ysimple_ctd) %in% c("99999","11371", "11430"))
+    col.sup_idx <- which(colnames(Ysimple_ctd) %in% c("IAO","SocServ","WaterSyst"))
+    
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
+
+
+par(mfrow = c(1,3))
 componentNbr <- 9
 pcaYsimple <- PCA(Ysimple_ctd,
                   ncp=componentNbr,
@@ -808,7 +845,7 @@ fviz_pca_biplot(pcaYsimple,
                 col.ind.sup="orange",
                 col.var = "red",
                 label="var",
-                xlimit=c(-1.5,1.5),ylim=c(-1.5,1.5),
+                xlim=c(-1,1),ylim=c(-1.5,1.5),
                 title=plottitle
 )
 
@@ -818,7 +855,7 @@ fviz_pca_biplot(pcaYsimple,
                 col.ind.sup="orange",
                 col.var = "red",
                 label="var",
-                xlimit=c(-1.5,1.5),ylim=c(-1.5,1.5),
+                xlim=c(-1,1),ylim=c(-1.5,1.5),
                 select.ind=list(contrib = 80),
                 title="(Individual contribution >= 80%)"
 )
@@ -828,8 +865,30 @@ par(mfrow = c(1,1))
 ## Plot of individuals' projection - by hand
 # ########################
 
-Z <- X[!rownames(X) %in% c("99999",zeroSRCzip),1:14]  # suppress
-Z <- cbind(Borough=Z[,1],Z[,4:9],EPsani=Z[,3]+Z[,14],ConsumProt=Z[,11]) # feature selection + extraction
+# suppress bogus ZIPXs, outliers as sup indivs.
+Z <- X[!rownames(X) %in% c("99999","11371", "11430",zeroSRCzip),1:14]  
+
+# feature selection + extraction
+if (yearNbr == 2010) {
+    # suppress bogus ZIPXs,and low count cells.
+    Z <- X[!rownames(X) %in% c("99999",zeroSRCzip),1:14] 
+    # feature selection + extraction
+    Z <- cbind(Borough=Z[,1],Z[,4:9],EPsani=Z[,3]+Z[,14],ConsumProt=Z[,11]) # feature selection + extraction
+} else if (yearNbr == 2014) {
+    # suppress bogus ZIPXs, outliers as sup indivs.
+    Z <- X[!rownames(X) %in% c("99999",zeroSRCzip),1:14] 
+    # feature selection + extraction
+    # Z <- cbind()
+    exit()
+} else if (yearNbr == 2018) {
+    # suppress bogus ZIPXs, outliers (?) and low count cells.
+    Z <- X[!rownames(X) %in% c("99999","11371", "11430",zeroSRCzip),1:14]  
+    # do nothing
+} else {
+    cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
+    exit()
+}
+    
 cntTot <- sum(Z[,-1])
 fij <- Z[,-1]/cntTot
 fi <- rowSums(fij)
@@ -959,7 +1018,7 @@ xMax <- max(xMaxBox); yMax <- max(yMaxBox)
 # 2nd quadrant x>=0, y<=0  ---- orangered3
 # 3rd quadrant x<=0, y<=0  ---- tan
 # 4th quadrant x<=0, y>=0  ---- green
-zipQuadrant <- ifelse(psiZ[,1] >=0,ifelse(psiZ[,2] >=0,"orchid2","orangered3"),ifelse(psiZ[,2] >=0,"green","tan"))
+zipQuadrant <- ifelse(-psiZ[,1] >=0,ifelse(psiZ[,2] >=0,"orchid2","orangered3"),ifelse(psiZ[,2] >=0,"green","tan"))
 zipWeight <- fi[-ind.sup_idx] / max(fi[-ind.sup_idx])
 
 # draw initial ghost ZIP perimeter
@@ -1016,16 +1075,15 @@ legend("bottomright",legend=c(1,2,3,4),pch=16,
 # Recall that loadings are evecs scaled by the square roots of their respective evals
 require(stats)  # part of 'base' package
 
-pcaYsimple.rot <- varimax(pcaYsimple$var$cor[,1:ndSimple])  
-pcaYsimple.rot
+(  pcaYsimple.rot <- varimax(pcaYsimple$var$cor[,1:ndSimple])  )
 
 Zs <- scale(apply(Z_ctd[,-1],2,as.numeric),center=T,scale=F)
-rownames(Zs) <-rownames(Z_ctd) 
-sd_var <- apply(Zs,2,sd)
+rownames(Zs) <- rownames(Z_ctd)
+sd_var <- apply(Zs[,-col.sup_idx],2,sd)
 
-p <- ncol(Zs) 
+p <- ncol(Zs[,-col.sup_idx]) 
 Phi.rot <- diag(sd_var) %*% pcaYsimple.rot$loadings[1:p,]
-tags <- colnames(Z_ctd[,-1])
+tags <- colnames(Z_ctd[,-c(1,col.sup_idx+1)])
 
 lmb.rot <- diag(t(Phi.rot) %*% Phi.rot)
 sum(lmb.rot)
@@ -1074,10 +1132,10 @@ grid()
 # To find varimax-rotated scores, one can use varimax-rotated loadings. Multiply the data with the
 # transposed pseudo-inverse of the rotated loadings, like so:
 # library(MASS)
-# note that Zs is centered but not normalized
-scores.rot <- Zs %*% t(MASS::ginv(pcaYsimple.rot$loadings[1:p,]))
+# Note Zs is centered, not normalized
+scores.rot <- Zs[,-col.sup_idx] %*% t(MASS::ginv(pcaYsimple.rot$loadings[1:p,]))
 
-colnames(scores.rot) <- paste0("Varimax-Dim.",1:ncol(scores.rot))
+colnames(scores.rot) <- paste0("Varimax-PC",1:ncol(scores.rot))
 rownames(scores.rot) <- rownames(Zs)
 
 Boroughs <- as.factor(Z_ctd[,1])
@@ -1086,17 +1144,17 @@ par(mfrow = c(1,1))
 
 plottitle=sprintf("Row profiles\' projection in PC1-2 factorial plane\n(after feature selection and varimax rotation)")
 #plotdata <- data.frame(PC1=scores.rot[,1],PC2=scores.rot[,2],z=rep("",nrow(Zs)))
-plotdata <- data.frame(PC1=-scores.rot[,1],PC2=-scores.rot[,2],z=rownames(Zs))
+plotdata <- data.frame(PC1=-scores.rot[,1],PC2=scores.rot[,2],z=rownames(Zs))
 plot1 <- ggplot(data = plotdata) + 
     theme_bw() +
     geom_vline(xintercept = 0, col="gray") +
     geom_hline(yintercept = 0, col="gray") +
-    # geom_text_repel(aes(PC1,PC2,label = z),
-    #                 size=3,
-    #                 point.padding = 0.5,
-    #                 box.padding = unit(0.55, "lines"),
-    #                 segment.size = 0.3,
-    #                 segment.color = 'grey') +
+    geom_text_repel(aes(PC1,PC2,label = z),
+                    size=3,
+                    point.padding = 0.5,
+                    box.padding = unit(0.55, "lines"),
+                    segment.size = 0.3,
+                    segment.color = 'grey') +
     geom_point(aes(PC1,PC2,col=Boroughs),size = 2) +
     scale_color_discrete(name = 'Borough') +
     labs(title = plottitle)

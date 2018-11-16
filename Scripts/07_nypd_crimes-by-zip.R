@@ -14,11 +14,6 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-          "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S"); 
-
 
 # #############################
 ## Source parameter file

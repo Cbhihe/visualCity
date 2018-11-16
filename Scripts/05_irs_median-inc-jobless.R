@@ -8,16 +8,18 @@
 
 rm(list=ls(all=TRUE))
 
-# #############################
-
 setwd("~/Documents/Work/Academic-research/NYC311/")
 
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 
-## colors defined in '01_nyc311_input-parameters.R'
-# ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-#           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
+# #############################
+## Source parameter file
+# #############################
+
+source(file="Scripts/01_nyc311_input-parameters.R",
+       local=F,echo=F)  # Year, Month, Day, ...
+
 
 # #############################
 ## Libraries
@@ -47,14 +49,6 @@ csvSaveF <- function(dataObj,targetfile) {
 exit <- function() {
     .Internal(.invokeRestart(list(NULL, NULL), NULL))
 }    # exit function. Use with caution: not standard, depends on OS's internals
-
-
-# #############################
-## Source parameter file
-# #############################
-
-source(file="Scripts/01_nyc311_input-parameters.R",
-       local=F,echo=F)  # Year, Month, Day, ...
 
 
 # #############################

@@ -24,7 +24,6 @@ setwd("~/Documents/Work/Academic-research/NYC311/")
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
 set.seed(932178)
 
-
 # #############################
 ## Load preliminary input parameters
 # #############################
@@ -148,3 +147,4 @@ target_file <- paste0("Data/",
                       ifelse(monthNbr<10,paste0("0",monthNbr),monthNbr),
                       "00_nyc_simple-whole-data-set.csv")
 csvSaveF(Y,target_file)     # csv to disk
+

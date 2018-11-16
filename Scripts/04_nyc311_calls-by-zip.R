@@ -148,8 +148,7 @@ ZIPcall <- ZIPcall[which(ZIPcall[,2] %in% c("Bronx","Brooklyn","Manhattan","Quee
 ## Save processed file to disk
 # #############################
 
-target_file <- paste0("Data/",
-                      yearNbr,
+target_file <- paste0("Data/",yearNbr,
                       ifelse(monthNbr<10,paste0("0",as.character(monthNbr)),as.character(monthNbr)),
                       "00_nyc_311call-by-zip.csv")
 csvSaveF(ZIPcall,target_file)     # csv to disk

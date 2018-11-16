@@ -11,20 +11,16 @@ rm(list=ls(all=TRUE))
 # #############################
 
 setwd("~/Documents/Work/Academic-research/NYC311/")
-
 set.seed(932178)
 options(scipen=6) # R switches to sci notation above 5 digits on plot axes
-
-## colors defined in '01_nyc311_input-parameters.R'
-# ccolors=c("red","green","blue","orange","cyan","tan1","darkred","honeydew2","violetred",
-#           "palegreen3","peachpuff4","lavenderblush3","lightgray","lightsalmon","wheat2")
-
-datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S")
 
 
 # #############################
 ## Source parameter file
 # #############################
+
+geolocalF=TRUE  # Use Google Maps API
+
 source(file="Scripts/01_nyc311_input-parameters.R",
        local=F,echo=F)  # Year, Month, Day, ...
 
@@ -407,30 +403,33 @@ if (reply == "i") {
         # #############################
         
         dim(protoY)
-        class(protoY)  # "data.frame"
+        class(protoY)# "data.frame"
         summary(protoY[,c(1,2,3,12)])
         
-        
-        nrow(protoY[protoY$ZIP == "" | is.na(protoY$ZIP),]) # (In April 2010) 12068 obs w/ missing ZIPs
+        nrow(protoY[protoY$ZIP == "" | is.na(protoY$ZIP),]) 
+        # (In April 2010) 12068 obs w/ missing ZIPs
         # (In April 2014)  3206 obs w/ missing ZIPs
         # (In April 2015)  4231 obs w/ missing ZIPs
-        # (In April 2018) _____ obs w/ missing ZIPs
+        # (In April 2018)  7851 obs w/ missing ZIPs
         
-        nrow(protoY[protoY$GPS == "" | is.na(protoY$GPS),]) # (In April 2010) 19583 obs w/ missing GPS coords
+        nrow(protoY[protoY$GPS == "" | is.na(protoY$GPS),])
+        # (In April 2010) 19583 obs w/ missing GPS coords
         # (In April 2014) 7777 obs w/ missing GPS coords
         # (In April 2015) 9116 obs w/ missing GPS coords
-        # (In April 2018) ____ obs w/ missing GPS coords
+        # (In April 2018) 12632 obs w/ missing GPS coords
         
-        nrow(protoY[protoY$ZIP == "" & protoY$GPS == "",])  # (In April 2010) 11952 obs w/ missing ZIP and GPS coords
+        nrow(protoY[protoY$ZIP == "" & protoY$GPS == "",])
+        # (In April 2010) 11952 obs w/ missing ZIP and GPS coords
         # (In April 2014) 3158 obs w/ missing ZIP and GPS coords
         # (In April 2015) 4192 obs w/ missing ZIP and GPS coords
-        # (In April 2018) _____ obs w/ missing ZIP and GPS coords
+        # (In April 2018) 7559 obs w/ missing ZIP and GPS coords
         nrow(protoY[protoY$ZIP == "" 
                     & protoY$Address == ""
-                    & protoY$GPS == "",])                   # (In April 2010) 9119 obs w/ missing ZIP, Address, GPS coords
+                    & protoY$GPS == "",])                   
+        # (In April 2010) 9119 obs w/ missing ZIP, Address, GPS coords
         # (In April 2014) 2979 obs w/ missing ZIP, Address, GPS coords
         # (In April 2015) 3581 obs w/ missing ZIP, Address, GPS coords
-        # (In April 2018) ____ obs w/ missing ZIP, Address, GPS coords
+        # (In April 2018) 5959 obs w/ missing ZIP, Address, GPS coords
         
         # To apply method 'aggr()' transform missing in NAs
         protoYmissing <- as.matrix(protoY) 
@@ -443,7 +442,7 @@ if (reply == "i") {
         protoYmissing[protoY$planeX == "",10] <- NA
         protoYmissing[protoY$planeY == "",11] <- NA
         protoYmissing[protoY$GPS == "",12] <- NA
-        
+        (protoY[protoY$ZIP == "" & protoY$GPS == "",])        
         protoYmissing <- as.data.frame(protoYmissing)
         names(protoYmissing)
         missingZIP <- protoYmissing[is.na(protoYmissing$ZIP),c(4,5,7,10,12)]
@@ -507,13 +506,13 @@ if (reply == "i") {
         vec2 <- vec2[order(match(names(vec2),names(vec1)))]  # sort vec2 according to order of vec1's colnames
         
         plotdata <- data.frame(Modalities=c(names(vec1),names(vec2)),
-                               Service_calls_count=c(vec1,vec2),
+                               SRCs=c(vec1,vec2),
                                Dataset=c(rep("Whole",Nlab),rep("Loc-missings",Nlab))
         )
         # To order barplot per decreasing mod. count, either:
         plotdata$Modalities <- factor(plotdata$Modalities,level=names(vec1))
-        plottitle <- paste0("NYC 311 Calls (",format(ISOdate(yearNbr,monthNbr,1),"%B")," ",yearNbr,")")
-        ggplot(data=plotdata,mapping=aes(x=Modalities,y=Service_calls_count,fill=Dataset)) +
+        plottitle <- paste0("NYC 311 SRCs (",format(ISOdate(yearNbr,monthNbr,1),"%B")," ",yearNbr,")")
+        ggplot(data=plotdata,mapping=aes(x=Modalities,y=SRCs,fill=Dataset)) +
             ggtitle(plottitle) + 
             geom_bar(position="dodge",stat="identity") +
             theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -538,13 +537,13 @@ if (reply == "i") {
         # Affected modality:
         cat("Fraction of modality \'SocServ\':",
             round(vec2[names(vec2)=="SocServ"]/vec1[names(vec1)=="SocServ"]*100,2),
-            "%")
+            "%\n")
         cat("Fraction of modality \'IAO\':",
             round(vec2[names(vec2)=="IAO"]/vec1[names(vec1)=="IAO"]*100,2),
-            "%\n\n")
+            "%\n")
         cat("Fraction of modality \'HousCond\':",
             round(vec2[names(vec2)=="HousCond"]/vec1[names(vec1)=="HousCond"]*100,2),
-            "%\n\n")
+            "%\n")
         
         
         ## Keep obs where all loc info is missing under fabricated ZIP code "99999"
@@ -642,10 +641,6 @@ token_intersect <- 0
 token_crossintersect <- 0
 
 cat("\nProcessed ZIP count:\n")
-
-
-geolocalF=TRUE  # Use Google Maps API
-
 
 if (! geolocalF) {
     ## QUERYING METHOD WITH NO API KEY
@@ -1045,7 +1040,7 @@ if (breakFlag == 1) {
     # 254 in April 2010 NYC311 dataset
     # 247 in April-2014 NYC311 dataset
     # 236 in April-2015 NYC311 dataset
-    #   in April 2018 NYC311 dataset
+    # 266 in April 2018 NYC311 dataset
     new_target_file <- paste0(proc_file,"03.csv")
     csvSaveF(protoY,new_target_file)     # csv to disk
     

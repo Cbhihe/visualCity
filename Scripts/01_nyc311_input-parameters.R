@@ -3,7 +3,7 @@
 ## Script:      01_nyc311_input-parameters.R
 ## Author:      Cedric Bhihe
 ## Delivery:    January 2019
-## Last edit:   September 2018
+## Last edit:   November 2018
 # #############################
 
 
@@ -33,13 +33,26 @@ if (geolocalF) {
 # #############################
 
 ## Analysis period
-#timeWindow <-"monthly"         # sliding time window not implemented yet
+#timeWindow <-"monthly"         # sliding time window not implemented
 yearNbr <- 2010
 monthNbr <- 4
 dayNbr <- 1
 
+# Specify periods of interest for time evolution (dynamic analysis) studies.
+dynAnalysisF <- TRUE   # value: TRUE or 1 for temporal evolution analysis; otherwise FALSE or 0
+periodsOfInterest <- c("April 2010 ","April  2014","April 2018")
+periodOfReference <- "April 2010"  # period of reference for time evolution studies.
+
+# Formats should be:
+#           'month year'    (MMM YYYY) 
+# and/or    'month year'    (MM YYYY)
+# exor      'year'          (YYYY)
+# Do not mix those formats, e.g. as in 'c("April 2014","May 2018","2017")'
+# Leading and trailing spaces are ignored. 
+
+
 # #############################
-## 
+## Misc
 # #############################
 
 datestamp <- format(Sys.time(),"%Y%m%d-%H%M%S")
