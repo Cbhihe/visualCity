@@ -167,9 +167,7 @@ for (pp in 1:length(periodsOfInterest)) {
     }
 }
 ## Check parsing results
-#monthNbr
-#yearNbr
-#periodOfReference
+#monthNbr; yearNbr; periodOfReference
 
 # Read / load data into list of data.frames, W
 source_file <- c()
@@ -190,7 +188,7 @@ for (ff in 1:length(periodsOfInterest)) {
     if ( paste(month.name[monthNbr[ff]],yearNbr[ff]) == periodOfReference ) {refFlag <- ff}
     
     # assign rownames
-    row.names(W[[paste0("W",dfTag)]]) <- paste0(W[[paste0("W",dfTag)]][,1],"_",yearNbr[ff])
+    row.names(W[[paste0("W",dfTag)]]) <- paste0(W[[paste0("W",dfTag)]][,1],"_",yearNbr[ff],monthNumStr)
     
     # rm first column with ZIP codes
     W[[paste0("W",dfTag)]] <- W[[paste0("W",dfTag)]][,-1]
@@ -236,39 +234,42 @@ for (ff in 1:length(periodsOfInterest)) {
 }
 # -----------
 
-# match column order of each period to that of the reference period 
+## Match column order of each period to that of the reference period 
+#  (required for the rbind() consolidation operation below) 
 W[["W_201404"]] <- W[["W_201404"]][,order(match(colnames(W[["W_201404"]]),colnames(W[["W_201004"]])))]
 W[["W_201804"]] <- W[["W_201804"]][,order(match(colnames(W[["W_201804"]]),colnames(W[["W_201004"]])))]
 # consolidate data from all period by row, following column order 
 Wtot <- rbind(W[["W_201004"]],W[["W_201404"]],W[["W_201804"]])
+rm(W)
 
+# backup composite matrix will every period appended by row
 csvSaveF(cbind(ZIP=rownames(Wtot),Wtot),"Data/20100400--20180400_te-mca-data.csv")
 
-
-# Identify special ZIP codes' indexes
+## Identify special ZIP codes' indexes
 refDateTag <- paste0("_",sub("-","",substr(as.Date(paste("01",periodOfReference),format="%d %b %Y"),1,7)))
 #  bogus ZIP code number for period of reference
-zip99999_Widx <- which(rownames(Wtot) == paste0("99999_",substr(as.Date(paste("01",periodOfReference),format="%d %b %Y"),1,4)))
+zip99999_Widx <- which(rownames(Wtot) == paste0("99999",refDateTag))
 
+supObservations <- c()
 if (periodOfReference == "April 2010") {
-    zip11430_Widx <- which(rownames(Wtot) == "11430_2010")  #  JFK, Queens 
-    zip10281_Widx <- which(rownames(Wtot) == "10281_2010")  #  Battery Park City, Manhattan
+    zip11430_Widx <- which(rownames(Wtot) == "11430_201004")  #  JFK, Queens 
+    zip10281_Widx <- which(rownames(Wtot) == "10281_201004")  #  Battery Park City, Manhattan
     supObservations <- c(zip10281_Widx, zip11430_Widx)
 } else if (periodOfReference == "April 2014") {
-    zip11430_Widx <- which(rownames(Wtot) == "11430_2014")  #  JFK, Queens 
-    zip10463_Widx <- which(rownames(Wtot) == "10463_2014")  #  Riverdale, The Bronx
+    zip11430_Widx <- which(rownames(Wtot) == "11430_201404")  #  JFK, Queens 
+    zip10463_Widx <- which(rownames(Wtot) == "10463_201404")  #  Riverdale, The Bronx
     supObservations <- c(zip10463_Widx, zip11430_Widx)
 } else if (periodOfReference == "April 2018") {
-    zip11430_Widx <- which(rownames(Wtot) == "11430_2018")  #  JFK, Queens 
-    zip11371_Widx <- which(rownames(Wtot) == "11371_2018")  #  La Guardia, Queens
+    zip11430_Widx <- which(rownames(Wtot) == "11430_201804")  #  JFK, Queens 
+    zip11371_Widx <- which(rownames(Wtot) == "11371_201804")  #  La Guardia, Queens
     supObservations <- c(zip11371_Widx, zip11430_Widx)
 } else {
     cat("\n\n---------------\nUNKNOWN YEAR\n Abort\n--------------------\n\n")
     exit()
 }
 
-# define supplementary individuals as those not part of the reference period
-supObs_idx <- grep(paste0("_",substr(as.Date(paste("01",periodOfReference),format="%d %b %Y"),1,4)),
+## Define supplementary individuals as those NOT being part of the reference period
+supObs_idx <- grep(paste0("_",sub("-","",substr(as.Date(paste("01",periodOfReference),format="%d %b %Y"),1,7))),
                    rownames(Wtot),
                    value=F,
                    fixed=T,
@@ -277,7 +278,7 @@ supObservations <- c(supObservations,supObs_idx)
 Boroughs <- Wtot[-c(zip99999_Widx, supObservations),1]   # only remove sup.ind and "99999" for reference period (i.e. active rows)
 Boroughs <- factor(Boroughs)  # clean up factor levels
 
-# perform MCA
+## Perform MCA
 mcaNYC311 <- MCA(Wtot[,-1],
                  ncp=5,
                  ind.sup=c(zip99999_Widx,supObservations),
@@ -292,29 +293,86 @@ mcaNYC311 <- MCA(Wtot[,-1],
                  tab.disj=NULL
                  )
 
+mcaCoords <- rbind(mcaNYC311$ind$coord[,c(1,2)],mcaNYC311$ind.sup$coord[,c(1,2)])
 summary(mcaNYC311,nbelements=12)
 dimdesc(mcaNYC311)
 
+## Observation s' PC1-2 coordinates' temporal sequences in the order 2010 -> 2014 -> 2018
+
+# collate all unique ZIP codes and fill data-frame with values ZIP code by ZIP code
+loci <- unique(data.frame(ZIP = substr(rownames(Wtot),1,5),
+                          Borough = Wtot[,1]))
+# order data frame according to ascending values of ZIP codes
+loci <- loci[order(loci$ZIP,decreasing=F),]
+
+# initialize / populate data-frame with collated PC1-2 data
+OCTS_pc12 <- as.data.frame(matrix("",ncol=(2+2*length(periodsOfInterest)),nrow=length(loci$ZIP)))
+colHeaders <- c()
+for (ff in 1:length(periodsOfInterest)) {
+    monthNumStr <- ifelse(monthNbr[ff]<10,paste0("0",as.character(monthNbr[ff])),as.character(monthNbr[ff]))
+    colSuffix <- paste0("_",yearNbr[ff],monthNumStr)
+    colHeaders <- c(colHeaders,paste0("Dim1",colSuffix),paste0("Dim2",colSuffix))
+}
+colnames(OCTS_pc12) <- c("ZIP", "Borough",colHeaders)
+OCTS_pc12$ZIP <- loci$ZIP
+OCTS_pc12$Borough <- loci$Borough
+
+for (ff in 1:length(periodsOfInterest)) {
+    col1 <- c()
+    col2 <- c()
+    monthNumStr <- ifelse(monthNbr[ff]<10,paste0("0",as.character(monthNbr[ff])),as.character(monthNbr[ff]))
+    periodTag <- paste0("_",yearNbr[ff],monthNumStr)
+    for (zip in as.character(OCTS_pc12$ZIP)) {
+        rowNbr <- which(rownames(mcaCoords) == paste0(zip,periodTag) )
+        if (length(rowNbr) != 0L) {
+            # case: zip code included as observation in current time period 
+            col1 <- c(col1,mcaCoords[rowNbr,1])
+            col2 <- c(col2,mcaCoords[rowNbr,2])
+        } else {
+            # case: zip code NOT included as observation in current time period 
+            col1 <- c(col1,NA)
+            col2 <- c(col2,NA)
+        }
+    }
+    OCTS_pc12[,(1+2*ff)] <- col1
+    OCTS_pc12[,(2*(ff+1))] <- col2
+}
+
+# complete OCTS_pc12 by imputing proximate values to missings 
+# <<<<<<<<<<<  TODO
+rm(loci, col1,col2, rowNbr)
 
 
+
+## MCA plots
 mcaPlot1 <- plot.MCA(mcaNYC311,
                     #mcaNYC311$ind$coord[,1],mcaNYC311$ind$coord[,2],
                     choix="ind",
                     autoLab="yes",
                     cex=0.9,
-                    col.ind = ccolors[as.numeric(factor(Boroughs[-supObservations]))], 
+                    #col.ind = ccolors[as.numeric(factor(Boroughs[-supObservations]))], 
+                    col.ind = ccolors[as.numeric(Boroughs)], 
                     col.var = c(rep("lightsalmon3",52),rep("purple",12)),
                     col.ind.sup = "red", col.quanti.sup = "orchid3",
-                    label = c("var","ind.sup","quanti.sup"),
-                    title = paste0("MCA - Biplot",
-                                   '\n(NYC 311 + NYPD 911: ',month.name[monthNbr],' ',yearNbr,')')
-)
+                    #label = c("var","ind.sup","quanti.sup"),
+                    label = c("var"),
+                    title = paste0("MCA - Dynamic biplot for NYC 311 + NYPD 911 data",
+                                   '\n(Reference period: ',periodOfReference,' -> 2014 -> 2018)'))
 mcaPlot1 + legend("bottomright",
                   legend=levels(Boroughs),
                   cex=0.8,
                   pt.cex=1.3,
                   pch=16,
                   col=ccolors[1:length(levels(Boroughs))])
+arrows(x0, y0, 
+       x1, y1, 
+       length = 0.08, # arrow head length in inches (0.08"~ 2mm)
+       angle = 20,    #  angle between each arrow head line and arrow shaft
+       code=2,        # arrow head is at destination point
+       col= 1,        # color-coded according to borough 
+       lty=3,         # 1=solid, 2=dashed, 3=dotted
+       lwd=0.7)       # lwd may default to one on certain devices 
+
 
 mcaPlot2 <- fviz_mca_biplot(mcaNYC311, 
                 axes = c(1, 2),
@@ -323,35 +381,53 @@ mcaPlot2 <- fviz_mca_biplot(mcaNYC311,
                 repel = TRUE, 
                 pointsize = 1.3,
                 label = "var",
-                #var.col=c(rep("gray",52),rep("red,12")),
                 invisible = "none", 
-                habillage = factor(Boroughs[-supObservations]), 
+                #habillage = factor(Boroughs[-supObservations]), 
+                habillage = Boroughs, 
                 addEllipses = FALSE,
-                palette = ccolors[1:length(levels(factor(Boroughs[-supObservations])))],
+                palette = ccolors[1:length(levels(Boroughs))],
                 arrows = c(FALSE, FALSE),
                 map = "asymmetric",
-                title = paste0("MCA - Biplot",
-                               '\n(NYC 311 + NYPD 911: ',month.name[monthNbr],' ',yearNbr,')') #,
                 #col.var = c(rep("lightsalmon3",52),rep("purple",12)),
-                
-                )
+                title = paste0("MCA - Dynamic biplot for NYC 311 + NYPD 911 data",
+                               '\n(Reference period: ',periodOfReference,' -> 2014 -> 2018)'))
 mcaPlot2 
 
-mcaPlot3 <- plot.MCA(mcaNYC311,
+mcaPlot3a <- plot.MCA(mcaNYC311,
                     #mcaNYC311$ind$coord[,1],mcaNYC311$ind$coord[,2],
-                    title=paste0("Composite variables' bi-plot projection in PC1-2\n(MCA on ",
-                                month.name[monthNbr]," ",yearNbr," NYC data)"),
+                    title=paste0("Variable projection in PC1-2\n(MCA on NYC 311 + NYPD 911 data for ",
+                                periodOfReference,")"),
                     choix="var",
                     autoLab="yes",
                     cex=0.9,
-                    col.ind = ccolors[as.numeric(Boroughs)], col.var = c(rep("black",13),rep("red",3), c("blue","blue")),
+                    col.ind = ccolors[as.numeric(Boroughs)], 
+                    col.var = c(rep("lightsalmon3",13),rep("purple",3), c("blue","blue")),
                     col.ind.sup = "red", col.quanti.sup = "orchid3",
                     label = c("var","ind.sup","quanti.sup"))
-mcaPlot3+ abline(a=c(0,0),b=0.44,lty=2,lwd=2,col="gray")
+mcaPlot3a + abline(a=c(0,0),b=0.65,lty=2,lwd=2,col="gray")
+
+mcaPlot3b <- plot.MCA(mcaNYC311,
+                     #mcaNYC311$ind$coord[,1],mcaNYC311$ind$coord[,2],
+                     title=paste0("Dynamic bi-plot projection in PC1-2\n(MCA on NYC 311 + NYPD 911 data for ",
+                                  periodOfReference," -> 2014 -> 2018)"),
+                     choix="ind",
+                     autoLab="auto",
+                     cex=0.9,
+                     col.ind = ccolors[as.numeric(Boroughs)], 
+                     col.var = c(rep("lightsalmon3",52),rep("purple",12), c("blue","blue")),
+                     col.ind.sup = "red", col.quanti.sup = "orchid3",
+                     label = c("var"),
+                     new.plot=T)
+mcaPlot3b  + legend("bottomright",
+                    legend=levels(Boroughs),
+                    cex=0.8,
+                    pt.cex=1.3,
+                    pch=16,
+                    col=ccolors[1:length(levels(Boroughs))])
 
 mcaPlot4 <- fviz_mca_var(mcaNYC311,
                          title=paste0("a) Variables' projection in PC1-2 (all)\n(MCA on ",
-                                      month.name[monthNbr]," ",yearNbr," NYC data)"),
+                                      periodOfReference," NYC 311 + NYPD 911 data)"),
                          axes = c(1, 2),
                          geom=c("arrow","text"),
                          label=c("var","quanti.sup"),
@@ -363,7 +439,7 @@ mcaPlot4 <- fviz_mca_var(mcaNYC311,
                          #coltext=c(rep("gray",52),rep("red",12)),
                          select.var = list(name = NULL, cos2 = 0, contrib = NULL),
                          habillage="none",
-                         #jitter = list(what = "label", width = NULL, height = NULL)   # deprecated, use "repel=" instead
+                         #jitter = list(what = "label", width = NULL, height = NULL)   # deprecated, use "repel=T" instead
                          repel=TRUE,
                          legend=NULL)
 #mcaPlot4 + points(mcaNYC311$var$coord[c(53:64),1],mcaNYC311$var$coord[c(53:64),2],pch=17,pointsize=2,col="red")         
