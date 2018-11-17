@@ -26,7 +26,7 @@ source(file="Scripts/01_nyc311_input-parameters.R",
 # #############################
 
 setRepositories(ind = c(1:6,8))
-#library(nnet)           # to fit neural network
+library(nnet)           # required to use 'class.ind()'
 library(FactoMineR)     # to use canned PCA and CA methods. 
 require(factoextra)     # to use enhanced graph functions
 require(graphics)       # enhanced graphics
@@ -338,9 +338,35 @@ for (ff in 1:length(periodsOfInterest)) {
     OCTS_pc12[,(2*(ff+1))] <- col2
 }
 
-# complete OCTS_pc12 by imputing proximate values to missings 
-# <<<<<<<<<<<  TODO
-rm(loci, col1,col2, rowNbr)
+## OCTS_pc12's coordinates' missings
+
+# Impute missing values or suppress lines when only one coordinate pair is present on row.
+colSeq <- seq(3,3+(length(periodsOfInterest)-1)*2,2) # sequence of colums to test
+abs_idx <- which(apply(OCTS_pc12[,colSeq],1,is.na))  # rwo wise cumulative cell index
+
+# suppress almost empty rows ('almost empty' means only one pair of coords is present on row)
+rowsToSuppress <- c()
+for (index in abs_idx) {
+    currentRow <- floor(index/length(periodsOfInterest))+ifelse(index %% length(periodsOfInterest) != 0,1,0)
+    positionInRow <- ifelse(index %% length(periodsOfInterest) == 0,3,index %% length(periodsOfInterest))
+    currentRowSum <- sum(OCTS_pc12[currentRow,colSeq],na.rm=T)
+    if (currentRowSum %in% as.numeric(OCTS_pc12[currentRow,colSeq])) {
+        # case: current row sum = sum of one of the row components means that component is the only non zero one.
+        rowsToSuppress <- c(rowsToSuppress,currentRow)
+    } else {
+        if (positionInRow > 1) {
+            closestNonZero <- max(which(OCTS_pc12[currentRow,seq(min(colSeq),colSeq[positionInRow-1],2)] != 0))
+            OCTS_pc12[currentRow,colSeq[positionInRow]] <- OCTS_pc12[currentRow,colSeq[closestNonZero]]
+            OCTS_pc12[currentRow,colSeq[positionInRow]+1] <- OCTS_pc12[currentRow,colSeq[closestNonZero]+1]
+        } else {
+            closestNonZero <- 1+min(which(OCTS_pc12[currentRow,seq(colSeq[positionInRow+1],max(colSeq),2)] != 0
+                                        & !is.na(OCTS_pc12[currentRow,seq(colSeq[positionInRow+1],max(colSeq),2)])))
+            OCTS_pc12[currentRow,colSeq[positionInRow]] <- OCTS_pc12[currentRow,colSeq[closestNonZero]]
+            OCTS_pc12[currentRow,colSeq[positionInRow]+1] <- OCTS_pc12[currentRow,colSeq[closestNonZero]+1]
+        }
+    }
+}
+OCTS_pc12 <- OCTS_pc12[-rowsToSuppress,]  # suppress rows
 
 
 
