@@ -295,8 +295,8 @@ mcaNYC311 <- MCA(Wtot[,-1],
                  row.w = NULL,
                  method="Indicator",
                  na.method="NA",
-                 tab.disj=NULL,
-                 xlab="Dim 1 (24.3%)"
+                 tab.disj=NULL #,
+                 #xlab="Dim 1 (24.3%)"
                  )
 
 mcaNYC311$eig
@@ -426,7 +426,7 @@ for (dsyr in dsYear) {
     
     # compute "between" inertia for each data-set's centroid 
     lhs <- paste0("centroid",dsyr,"_Ib")
-    rhs <- paste0("sqrt(sum(",paste0("centroid",dsyr),"^2))/nrow(OCTS)") 
+    rhs <- paste0("sqrt(sum(",paste0("centroid",dsyr),"^2))/nrow(OCTS)") # 'nrow(OCTS)' = weight of data set corresponding to centroid
     eq <- paste(paste(lhs, rhs, sep=" <- "),collapse=";")
     eval(parse(text=eq))
 }
@@ -444,14 +444,13 @@ for (dsyr in dsYear) {
 }
 
 
-# Calculate contribution to inertia of each data-set's centroid 
-# (i.e. the "within" inertia contribution from each data-set)
+## Calculate contribution to inertia of each data-set's centroid 
 nd <- ncol(mcaCoords) # nbr of dim over wich IEP is calculated
 datasetIEP <- c()
 whichPeriod <- 0
 
 for ( dsyr in substr(periodsOfInterest,nchar(periodsOfInterest)-3,nchar(periodsOfInterest))) {
-    # "dsyr" = data-set year
+    # "dsyr" = data set year
     whichPeriod <- whichPeriod+1
     indiv_idx <- which(regexpr(dsyr,
                                rownames(mcaCoords),
@@ -478,6 +477,29 @@ for ( dsyr in substr(periodsOfInterest,nchar(periodsOfInterest)-3,nchar(periodsO
     #datasetIEP <- c(datasetIEP,apply(indIEP,2,sum))
     datasetIEP <- c(datasetIEP,round(apply(indIEP,2,sum),2))
 }
+
+## Compute "within" inertia of each data-set (based on Chi-square statistics)
+#  Data must consist in positive counts. (cannot be factorial plane coordinates from MCA !!)
+dsWithinInertia <- c()
+
+for ( period in periodsOfInterest ) {
+    dsmonth <- match(tolower(substr(period,1,nchar(period)-5)),MONTHLST)    # "dsmonth" = data set month's double digit numeric value
+    monthNumStr <- ifelse(dsmonth<10,paste0("0",as.character(dsmonth)),as.character(dsmonth))
+    dsyr    <- substr(period,nchar(period)-3,nchar(period))        # "dsyr" = data set year quadruple digit numeric value
+    periodTag <- paste0(dsyr,monthNumStr,"00")    #  yyyymm00
+    source_file <- paste0("Data/",periodTag,"_nyc_simple-whole-data-set.csv")
+    ds <- read.csv(source_file,header=T,sep=",",quote="\"",dec=".",skip=0)
+    row.names(ds) <- ds$ZIP
+    # suppress:
+    #   ghost ZIP code area "99999", 
+    #   JFK as outlier "11430", 
+    #   any row profile whose count sum total <=5
+    #   columns 1, 2, 10 and 20
+    ds <- ds[which(! ds$ZIP %in% c("11430","99999") & apply(ds[,-c(1,2,19,20)],1,sum) > 5 ),-c(1,2,19,20)]
+    withinInertia <- chisq.test(ds)$statistic/sum(ds)
+    dsWithinInertia <- c(dsWithinInertia,withinInertia)
+    cat("\nWithin inertia for data set '",period,"' :",withinInertia,"\n")
+    }
 
 # ##############################
 ## MCA plots

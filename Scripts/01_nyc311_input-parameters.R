@@ -33,14 +33,17 @@ if (geolocalF) {
 # #############################
 
 ## Analysis period
+MONTHLST <- c("january","february","march","april","may", "june","july","august","september","october","november","december")
+MONTHLSTabb <- substr(month_lst,1,3)
+
 #timeWindow <-"monthly"         # sliding time window not implemented
-yearNbr <- 2010
+yearNbr <- 2018
 monthNbr <- 4
 dayNbr <- 1
 
 # Specify periods of interest for time evolution (dynamic analysis) studies.
 dynAnalysisF <- TRUE   # value: TRUE or 1 for temporal evolution analysis; otherwise FALSE or 0
-periodsOfInterest <- c("April 2010 ","April  2014","April 2018")
+periodsOfInterest <- c("April 2010 ","April 2014","April 2018")
 periodOfReference <- "April 2010"  # period of reference for time evolution studies.
 
 # Formats should be:
