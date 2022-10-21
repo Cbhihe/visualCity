@@ -1,0 +1,6 @@
+﻿
+/*.tar.gz
+/*.tar.xz
+.Rhistory
+Old*
+/Scripts_Word2vec
